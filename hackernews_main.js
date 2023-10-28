@@ -37,25 +37,49 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const yargs_1 = __importDefault(require("yargs"));
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const util_1 = require("util");
 const extractor_1 = require("./extractor");
+const hackernews_1 = require("./hackernews");
+const writeFileAsync = (0, util_1.promisify)(fs.writeFile);
 const argv = yargs_1.default.options({
-    url: { type: 'string', demandOption: true },
-    output_dir: { type: 'string', demandOption: false },
+    output_dir: {
+        type: 'string',
+        demandOption: true,
+        default: '/tmp/hackernews',
+    },
 }).argv;
+const createFolder = (folder) => {
+    if (!fs.existsSync(folder)) {
+        fs.mkdirSync(folder, { recursive: true });
+    }
+};
 (() => __awaiter(void 0, void 0, void 0, function* () {
     const distiller = yield extractor_1.Distiller.create();
-    const url = argv.url;
-    console.log('URL:', url);
-    const result = yield distiller.fetchPage(url);
-    console.log(result.headline);
-    console.log(result.content);
-    if (argv.output_dir) {
-        if (!fs.existsSync(argv.output_dir)) {
-            fs.mkdirSync(argv.output_dir, { recursive: true });
+    const stories = yield hackernews_1.HackerNews.fetchBestStories();
+    for (const story of stories) {
+        const url = story.url;
+        const storyId = story.id;
+        console.log(`${storyId} | ${story.title} | ${url}`);
+        if (!url) {
+            console.log(JSON.stringify(story));
+            continue;
         }
-        console.log(`Output articles to ${argv.output_dir}`);
-        yield result.write(argv.output_dir);
+        const outputFolder = path.join(argv.output_dir, storyId.toString());
+        const outputStoryJsonFile = path.join(outputFolder, 'story.json');
+        // Ignore if the content was distilled.
+        if (fs.existsSync(outputStoryJsonFile))
+            continue;
+        try {
+            const distilledPage = yield distiller.fetchPage(url);
+            createFolder(outputFolder);
+            yield distilledPage.write(outputFolder);
+            writeFileAsync(outputStoryJsonFile, JSON.stringify(story, null, 2), 'utf8');
+        }
+        catch (error) {
+            console.log('Error:', error);
+        }
     }
-    // TODO: How to avoid manually close it using 'using' clause?
+    // TODO: How to auto close it? Forget to close and it will hang.
     yield distiller.closeBrowser();
 }))();

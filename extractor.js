@@ -36,13 +36,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Distiller = exports.WebPageContent = void 0;
-const puppeteer = __importStar(require("puppeteer-core"));
+const puppeteer = __importStar(require("puppeteer"));
 const fs_1 = require("fs");
 const path_1 = __importDefault(require("path"));
 const util_1 = require("util");
 const readFileAsync = (0, util_1.promisify)(fs_1.readFile);
 const writeFileAsync = (0, util_1.promisify)(fs_1.writeFile);
-const CHROME_BINARY = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const DD_SCRIPT_PATH = './domdistiller.js';
 class WebPageContent {
     constructor(headline, content, result) {
@@ -50,6 +49,7 @@ class WebPageContent {
         this.content = content;
         this.result = result;
     }
+    // TODO: move to an io util as a functional style.
     write(folder) {
         return __awaiter(this, void 0, void 0, function* () {
             const content_file = path_1.default.join(folder, 'article.txt');
@@ -81,10 +81,7 @@ class Distiller {
     static create() {
         return __awaiter(this, void 0, void 0, function* () {
             if (!Distiller.distiller) {
-                const browser = yield puppeteer.launch({
-                    executablePath: CHROME_BINARY,
-                    headless: true,
-                });
+                const browser = yield puppeteer.launch({ headless: 'new' });
                 // Get DOM Distiller Script.
                 const domDistillerScript = yield readFileAsync(DD_SCRIPT_PATH, {
                     encoding: 'utf8',
@@ -119,21 +116,3 @@ class Distiller {
     }
 }
 exports.Distiller = Distiller;
-// (async () => {
-//   const distiller = await Distiller.create();
-//   // const URL = 'https://www.bbc.com/news/technology-66618852';
-//   const URL = 'https://www.bbc.co.uk/news/technology-64285227';
-//   // const URL = 'https://www.bbc.co.uk/news/technology-62788725';
-//   const distilled = await distiller.fetchPage(URL);
-//   console.log(distilled.headline);
-//   console.log(distilled.content);
-//   const { headline, content, result } = distilled;
-//   const content_file = '/tmp/article.txt';
-//   await writeFileAsync(content_file, `${headline}\n${content}`, 'utf8');
-//   const result_file = '/tmp/article.json';
-//   await writeFileAsync(result_file, JSON.stringify(result, null, 2), 'utf8');
-//   const content_html = `<html><body><h1>${headline}</h1>${content}</body></html>`;
-//   const html_file = '/tmp/article.html';
-//   await writeFileAsync(html_file, content_html, 'utf8');
-//   distiller.closeBrowser();
-// })();

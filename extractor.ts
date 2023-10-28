@@ -1,4 +1,4 @@
-import * as puppeteer from 'puppeteer-core';
+import * as puppeteer from 'puppeteer';
 import { readFile, writeFile } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
@@ -6,8 +6,6 @@ import { promisify } from 'util';
 const readFileAsync = promisify(readFile);
 const writeFileAsync = promisify(writeFile);
 
-const CHROME_BINARY =
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const DD_SCRIPT_PATH = './domdistiller.js';
 
 export class WebPageContent {
@@ -57,10 +55,7 @@ export class Distiller {
 
   public static async create(): Promise<Distiller> {
     if (!Distiller.distiller) {
-      const browser = await puppeteer.launch({
-        executablePath: CHROME_BINARY,
-        headless: true,
-      });
+      const browser = await puppeteer.launch({ headless: 'new' });
       // Get DOM Distiller Script.
       const domDistillerScript = await readFileAsync(DD_SCRIPT_PATH, {
         encoding: 'utf8',
