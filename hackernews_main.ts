@@ -13,18 +13,28 @@ const argv = yargs.options({
     type: 'string',
     demandOption: true,
     default: '/tmp/hackernews',
+    describe: 'Output folder containing a subfolder for each story.',
+  },
+  story_type: {
+    type: 'string',
+    choices: ['top', 'best'],
+    default: 'best',
+    describe: 'which stories? Best or top?',
   },
 }).argv as any;
 
-const createFolder = (folder: string) => {
-  if (!fs.existsSync(folder)) {
-    fs.mkdirSync(folder, { recursive: true });
+const getStory = async (story_type: string) => {
+  if (argv.story_type === 'best') {
+    return await HackerNews.fetchBestStories();
+  } else if (argv.story_type === 'top') {
+    return await HackerNews.fetchTopStories();
+  } else {
+    throw TypeError(`Unknown story type: ${argv.story_type}`);
   }
 };
 
-(async () => {
-  const distiller = await Distiller.create();
-  const stories = await HackerNews.fetchBestStories();
+Distiller.perform({ extractTextOnly: true }, async (distiller: Distiller) => {
+  const stories = await getStory(argv.story_type);
 
   for (const story of stories) {
     const url: string = story.url;
@@ -40,8 +50,8 @@ const createFolder = (folder: string) => {
     if (fs.existsSync(outputStoryJsonFile)) continue;
 
     try {
-      const distilledPage = await distiller.fetchPage(url);
-      createFolder(outputFolder);
+      const distilledPage = await distiller.distilPage(url);
+      fs.mkdirSync(outputFolder, { recursive: true });
       await distilledPage.write(outputFolder);
       writeFileAsync(
         outputStoryJsonFile,
@@ -52,7 +62,4 @@ const createFolder = (folder: string) => {
       console.log('Error:', error);
     }
   }
-
-  // TODO: How to auto close it? Forget to close and it will hang.
-  await distiller.closeBrowser();
-})();
+});

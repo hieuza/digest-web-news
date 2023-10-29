@@ -74,11 +74,12 @@ class WebPageContent {
 }
 exports.WebPageContent = WebPageContent;
 class Distiller {
-    constructor(browser, domDistillerScript) {
+    constructor(browser, domDistillerScript, extractTextOnly) {
         this.browser = browser;
         this.domDistillerScript = domDistillerScript;
+        this.extractTextOnly = extractTextOnly;
     }
-    static create() {
+    static create(options = { extractTextOnly: false }) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!Distiller.distiller) {
                 const browser = yield puppeteer.launch({ headless: 'new' });
@@ -86,21 +87,33 @@ class Distiller {
                 const domDistillerScript = yield readFileAsync(DD_SCRIPT_PATH, {
                     encoding: 'utf8',
                 });
-                Distiller.distiller = new Distiller(browser, domDistillerScript);
+                Distiller.distiller = new Distiller(browser, domDistillerScript, options.extractTextOnly);
             }
             return Distiller.distiller;
         });
     }
-    fetchPage(url) {
+    static perform(options, task) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const distiller = yield this.create(options);
+            try {
+                yield task(distiller);
+            }
+            finally {
+                distiller.closeBrowser();
+            }
+        });
+    }
+    distilPage(url) {
         return __awaiter(this, void 0, void 0, function* () {
             const page = yield this.browser.newPage();
             yield page.goto(url);
             yield page.evaluate(this.domDistillerScript);
+            // https://github.com/chromium/dom-distiller-dist/blob/main/proto/dom_distiller.proto
             // 1 = extract_text_only: true
             // 2 = debug_level: 0 -- log nothing. 3 -- everything.
             // 3 = original_url
             const result = yield page.evaluate(`
-        var options = { 1: false, 2:0, 3: "${url}" };
+        var options = { 1: ${this.extractTextOnly}, 2:0, 3: "${url}" };
         org.chromium.distiller.DomDistiller.applyWithOptions(options);
     `);
             yield page.close();

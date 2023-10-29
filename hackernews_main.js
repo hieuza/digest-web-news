@@ -47,16 +47,28 @@ const argv = yargs_1.default.options({
         type: 'string',
         demandOption: true,
         default: '/tmp/hackernews',
+        describe: 'Output folder containing a subfolder for each story.',
+    },
+    story_type: {
+        type: 'string',
+        choices: ['top', 'best'],
+        default: 'best',
+        describe: 'which stories? Best or top?',
     },
 }).argv;
-const createFolder = (folder) => {
-    if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder, { recursive: true });
+const getStory = (story_type) => __awaiter(void 0, void 0, void 0, function* () {
+    if (argv.story_type === 'best') {
+        return yield hackernews_1.HackerNews.fetchBestStories();
     }
-};
-(() => __awaiter(void 0, void 0, void 0, function* () {
-    const distiller = yield extractor_1.Distiller.create();
-    const stories = yield hackernews_1.HackerNews.fetchBestStories();
+    else if (argv.story_type === 'top') {
+        return yield hackernews_1.HackerNews.fetchTopStories();
+    }
+    else {
+        throw TypeError(`Unknown story type: ${argv.story_type}`);
+    }
+});
+extractor_1.Distiller.perform({ extractTextOnly: true }, (distiller) => __awaiter(void 0, void 0, void 0, function* () {
+    const stories = yield getStory(argv.story_type);
     for (const story of stories) {
         const url = story.url;
         const storyId = story.id;
@@ -71,8 +83,8 @@ const createFolder = (folder) => {
         if (fs.existsSync(outputStoryJsonFile))
             continue;
         try {
-            const distilledPage = yield distiller.fetchPage(url);
-            createFolder(outputFolder);
+            const distilledPage = yield distiller.distilPage(url);
+            fs.mkdirSync(outputFolder, { recursive: true });
             yield distilledPage.write(outputFolder);
             writeFileAsync(outputStoryJsonFile, JSON.stringify(story, null, 2), 'utf8');
         }
@@ -80,6 +92,4 @@ const createFolder = (folder) => {
             console.log('Error:', error);
         }
     }
-    // TODO: How to auto close it? Forget to close and it will hang.
-    yield distiller.closeBrowser();
-}))();
+}));

@@ -41,12 +41,12 @@ const extractor_1 = require("./extractor");
 const argv = yargs_1.default.options({
     url: { type: 'string', demandOption: true },
     output_dir: { type: 'string', demandOption: false },
+    extract_text_only: { type: 'boolean', default: false },
 }).argv;
-(() => __awaiter(void 0, void 0, void 0, function* () {
-    const distiller = yield extractor_1.Distiller.create();
+extractor_1.Distiller.perform({ extractTextOnly: argv.extract_text_only }, (distiller) => __awaiter(void 0, void 0, void 0, function* () {
     const url = argv.url;
     console.log('URL:', url);
-    const result = yield distiller.fetchPage(url);
+    const result = yield distiller.distilPage(url);
     console.log(result.headline);
     console.log(result.content);
     if (argv.output_dir) {
@@ -56,6 +56,4 @@ const argv = yargs_1.default.options({
         console.log(`Output articles to ${argv.output_dir}`);
         yield result.write(argv.output_dir);
     }
-    // TODO: How to avoid manually close it using 'using' clause?
-    yield distiller.closeBrowser();
-}))();
+}));
