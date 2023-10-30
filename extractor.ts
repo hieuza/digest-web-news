@@ -1,51 +1,13 @@
 import * as puppeteer from 'puppeteer';
-import { readFile, writeFile } from 'fs';
-import path from 'path';
+import { readFile } from 'fs';
 import { promisify } from 'util';
+import { WebPageContent } from './page_content';
 
 const readFileAsync = promisify(readFile);
-const writeFileAsync = promisify(writeFile);
 
 const DD_SCRIPT_PATH = './domdistiller.js';
 
 type DistilOptions = { extractTextOnly: boolean };
-
-export class WebPageContent {
-  constructor(
-    public headline: string,
-    public content: string,
-    public result: any
-  ) {}
-
-  // TODO: move to an io util as a functional style.
-  public async write(folder: string) {
-    const content_file = path.join(folder, 'article.txt');
-    await writeFileAsync(
-      content_file,
-      `${this.headline}\n${this.content}`,
-      'utf8'
-    );
-    const result_file = path.join(folder, 'article.json');
-    await writeFileAsync(
-      result_file,
-      JSON.stringify(this.result, null, 2),
-      'utf8'
-    );
-    const content_html = `<html>
-      <head>
-        <style>
-        body { max-width: 700px; margin: 0 auto ; }
-        </style>
-      </head>
-      <body>
-        <h1>${this.headline}</h1>
-        ${this.content}
-      </body>
-      </html>`;
-    const html_file = path.join(folder, 'article.html');
-    await writeFileAsync(html_file, content_html, 'utf8');
-  }
-}
 
 export class Distiller {
   private static distiller: Distiller;
@@ -102,10 +64,7 @@ export class Distiller {
     `);
     await page.close();
 
-    const headline = result['1'];
-    const content = result['2']['1'];
-
-    return new WebPageContent(headline, content, result);
+    return WebPageContent.fromDistillationResult(result);
   }
 
   async closeBrowser(): Promise<void> {

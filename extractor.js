@@ -31,48 +31,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Distiller = exports.WebPageContent = void 0;
+exports.Distiller = void 0;
 const puppeteer = __importStar(require("puppeteer"));
 const fs_1 = require("fs");
-const path_1 = __importDefault(require("path"));
 const util_1 = require("util");
+const page_content_1 = require("./page_content");
 const readFileAsync = (0, util_1.promisify)(fs_1.readFile);
-const writeFileAsync = (0, util_1.promisify)(fs_1.writeFile);
 const DD_SCRIPT_PATH = './domdistiller.js';
-class WebPageContent {
-    constructor(headline, content, result) {
-        this.headline = headline;
-        this.content = content;
-        this.result = result;
-    }
-    // TODO: move to an io util as a functional style.
-    write(folder) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const content_file = path_1.default.join(folder, 'article.txt');
-            yield writeFileAsync(content_file, `${this.headline}\n${this.content}`, 'utf8');
-            const result_file = path_1.default.join(folder, 'article.json');
-            yield writeFileAsync(result_file, JSON.stringify(this.result, null, 2), 'utf8');
-            const content_html = `<html>
-      <head>
-        <style>
-        body { max-width: 700px; margin: 0 auto ; }
-        </style>
-      </head>
-      <body>
-        <h1>${this.headline}</h1>
-        ${this.content}
-      </body>
-      </html>`;
-            const html_file = path_1.default.join(folder, 'article.html');
-            yield writeFileAsync(html_file, content_html, 'utf8');
-        });
-    }
-}
-exports.WebPageContent = WebPageContent;
 class Distiller {
     constructor(browser, domDistillerScript, extractTextOnly) {
         this.browser = browser;
@@ -117,9 +83,7 @@ class Distiller {
         org.chromium.distiller.DomDistiller.applyWithOptions(options);
     `);
             yield page.close();
-            const headline = result['1'];
-            const content = result['2']['1'];
-            return new WebPageContent(headline, content, result);
+            return page_content_1.WebPageContent.fromDistillationResult(result);
         });
     }
     closeBrowser() {

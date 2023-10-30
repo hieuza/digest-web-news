@@ -2,9 +2,8 @@ import yargs from 'yargs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
-import { WebPageContent, Distiller } from './extractor';
+import { Distiller } from './extractor';
 import { HackerNews } from './hackernews';
-import { TimeoutError } from 'puppeteer';
 
 const writeFileAsync = promisify(fs.writeFile);
 
@@ -24,9 +23,9 @@ const argv = yargs.options({
 }).argv as any;
 
 const getStory = async (story_type: string) => {
-  if (argv.story_type === 'best') {
+  if (story_type === 'best') {
     return await HackerNews.fetchBestStories();
-  } else if (argv.story_type === 'top') {
+  } else if (story_type === 'top') {
     return await HackerNews.fetchTopStories();
   } else {
     throw TypeError(`Unknown story type: ${argv.story_type}`);

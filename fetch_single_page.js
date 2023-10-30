@@ -38,6 +38,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const yargs_1 = __importDefault(require("yargs"));
 const fs = __importStar(require("fs"));
 const extractor_1 = require("./extractor");
+const digest_1 = require("./digest");
 const argv = yargs_1.default.options({
     url: { type: 'string', demandOption: true },
     output_dir: { type: 'string', demandOption: false },
@@ -46,14 +47,18 @@ const argv = yargs_1.default.options({
 extractor_1.Distiller.perform({ extractTextOnly: argv.extract_text_only }, (distiller) => __awaiter(void 0, void 0, void 0, function* () {
     const url = argv.url;
     console.log('URL:', url);
-    const result = yield distiller.distilPage(url);
-    console.log(result.headline);
-    console.log(result.content);
+    const page = yield distiller.distilPage(url);
+    console.log(page.headline);
+    console.log(page.content);
+    const processed = yield digest_1.Digester.processPage(page);
+    console.log('-'.repeat(80));
+    console.log(processed);
+    page.processed = processed;
     if (argv.output_dir) {
         if (!fs.existsSync(argv.output_dir)) {
             fs.mkdirSync(argv.output_dir, { recursive: true });
         }
         console.log(`Output articles to ${argv.output_dir}`);
-        yield result.write(argv.output_dir);
+        yield page.write(argv.output_dir);
     }
 }));

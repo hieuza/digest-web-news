@@ -57,10 +57,10 @@ const argv = yargs_1.default.options({
     },
 }).argv;
 const getStory = (story_type) => __awaiter(void 0, void 0, void 0, function* () {
-    if (argv.story_type === 'best') {
+    if (story_type === 'best') {
         return yield hackernews_1.HackerNews.fetchBestStories();
     }
-    else if (argv.story_type === 'top') {
+    else if (story_type === 'top') {
         return yield hackernews_1.HackerNews.fetchTopStories();
     }
     else {

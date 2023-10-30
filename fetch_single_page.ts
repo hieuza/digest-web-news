@@ -1,6 +1,7 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
-import { WebPageContent, Distiller } from './extractor';
+import { Distiller } from './extractor';
+import { Digestor } from './digest';
 
 const argv = yargs.options({
   url: { type: 'string', demandOption: true },
@@ -14,16 +15,22 @@ Distiller.perform(
     const url = argv.url;
 
     console.log('URL:', url);
-    const result = await distiller.distilPage(url);
-    console.log(result.headline);
-    console.log(result.content);
+    const page = await distiller.distilPage(url);
+    console.log(page.headline);
+    console.log(page.content);
+
+    const processed = await Digestor.processPage(page);
+    console.log('-'.repeat(80));
+    console.log(processed);
+    // How to make it as a part of the page?
+    page.processed = processed;
 
     if (argv.output_dir) {
       if (!fs.existsSync(argv.output_dir)) {
         fs.mkdirSync(argv.output_dir, { recursive: true });
       }
       console.log(`Output articles to ${argv.output_dir}`);
-      await result.write(argv.output_dir);
+      await page.write(argv.output_dir);
     }
   }
 );
