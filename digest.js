@@ -12,11 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Digester = void 0;
+exports.Digestor = void 0;
 const page_content_1 = require("./page_content");
 const openai_1 = __importDefault(require("openai"));
 // For a given page content, summarise it and classify the topics.
-class Digester {
+class Digestor {
     static processFolder(folder) {
         return __awaiter(this, void 0, void 0, function* () {
             const page = yield page_content_1.WebPageContent.fromFolder(folder);
@@ -57,7 +57,7 @@ ${page.content}
 
 Your answer:
 `;
-            const response = yield Digester.openai.chat.completions.create({
+            const response = yield Digestor.openai.chat.completions.create({
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: prompt },
@@ -68,6 +68,5 @@ Your answer:
         });
     }
 }
-exports.Digester = Digester;
-Digester.openai = new openai_1.default({ apiKey: process.env.OPENAI_API_KEY });
-(() => __awaiter(void 0, void 0, void 0, function* () { return yield Digester.processFolder('/tmp/hackernews/38058979'); }))();
+exports.Digestor = Digestor;
+Digestor.openai = new openai_1.default({ apiKey: process.env.OPENAI_API_KEY });

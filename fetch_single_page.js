@@ -43,6 +43,7 @@ const argv = yargs_1.default.options({
     url: { type: 'string', demandOption: true },
     output_dir: { type: 'string', demandOption: false },
     extract_text_only: { type: 'boolean', default: false },
+    do_digest: { type: 'boolean', default: false },
 }).argv;
 extractor_1.Distiller.perform({ extractTextOnly: argv.extract_text_only }, (distiller) => __awaiter(void 0, void 0, void 0, function* () {
     const url = argv.url;
@@ -50,10 +51,13 @@ extractor_1.Distiller.perform({ extractTextOnly: argv.extract_text_only }, (dist
     const page = yield distiller.distilPage(url);
     console.log(page.headline);
     console.log(page.content);
-    const processed = yield digest_1.Digester.processPage(page);
-    console.log('-'.repeat(80));
-    console.log(processed);
-    page.processed = processed;
+    if (argv.do_digest) {
+        const processed = yield digest_1.Digestor.processPage(page);
+        console.log('-'.repeat(80));
+        console.log(processed);
+        // How to make it as a part of the page?
+        page.processed = processed;
+    }
     if (argv.output_dir) {
         if (!fs.existsSync(argv.output_dir)) {
             fs.mkdirSync(argv.output_dir, { recursive: true });

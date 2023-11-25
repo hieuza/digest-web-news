@@ -7,6 +7,7 @@ const argv = yargs.options({
   url: { type: 'string', demandOption: true },
   output_dir: { type: 'string', demandOption: false },
   extract_text_only: { type: 'boolean', default: false },
+  do_digest: { type: 'boolean', default: false },
 }).argv as any;
 
 Distiller.perform(
@@ -19,11 +20,13 @@ Distiller.perform(
     console.log(page.headline);
     console.log(page.content);
 
-    const processed = await Digestor.processPage(page);
-    console.log('-'.repeat(80));
-    console.log(processed);
-    // How to make it as a part of the page?
-    page.processed = processed;
+    if (argv.do_digest) {
+      const processed = await Digestor.processPage(page);
+      console.log('-'.repeat(80));
+      console.log(processed);
+      // How to make it as a part of the page?
+      page.processed = processed;
+    }
 
     if (argv.output_dir) {
       if (!fs.existsSync(argv.output_dir)) {
