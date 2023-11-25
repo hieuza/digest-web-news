@@ -1,11 +1,6 @@
 import * as puppeteer from 'puppeteer';
-import { readFile } from 'fs';
-import { promisify } from 'util';
 import { WebPageContent } from './page_content';
-
-const readFileAsync = promisify(readFile);
-
-const DD_SCRIPT_PATH = './domdistiller.js';
+import { domDistillerScript } from './domdistiller';
 
 type DistilOptions = { extractTextOnly: boolean };
 
@@ -24,9 +19,6 @@ export class Distiller {
     if (!Distiller.distiller) {
       const browser = await puppeteer.launch({ headless: 'new' });
       // Get DOM Distiller Script.
-      const domDistillerScript = await readFileAsync(DD_SCRIPT_PATH, {
-        encoding: 'utf8',
-      });
       Distiller.distiller = new Distiller(
         browser,
         domDistillerScript,

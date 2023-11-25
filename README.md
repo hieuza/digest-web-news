@@ -1,13 +1,21 @@
 Fetch and distill the content of web pages using DOM Distiller script.
 
-Steps to run:
+# General set-up
 
 ```bash
-# Compile the TypeScript code. Run once.
+# Install nvm and npm.
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+nvm install --lts
+
+# Install the required packages.
+npm install
+
+# Compile the TypeScript code.
 tsc
+
 # Run on a given URL.
 URL=http://www.paulgraham.com/hwh.html
-node fetch_single_page.js --url=${URL} --output_dir=/tmp/
+node dist/fetch_single_page.js --url=${URL} --extract_text_only=true --output_dir=/tmp/
 ```
 
 TODO:
@@ -49,7 +57,7 @@ filename="${timestamp}-hackernews.txt"
 output_file="~/data/${filename}"
 
 cd ~/code/puppeteer-page-content
-~/.nvm/versions/node/v18.16.1/bin/node hackernews_main.js --output_dir=~/data/hackernews 2>&1 | tee ${output_file}
+~/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=~/data/hackernews 2>&1 | tee ${output_file}
 
 {
   echo "From: <your_email>@gmail.com"
