@@ -3,7 +3,7 @@ Fetch and distill the content of web pages using DOM Distiller script.
 # General set-up
 
 ```bash
-# Install nvm and npm.
+# (Optional) Install nvm and npm.
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 nvm install --lts
 
@@ -15,7 +15,7 @@ tsc
 
 # Run on a given URL.
 URL=http://www.paulgraham.com/hwh.html
-node dist/fetch_single_page.js --url=${URL} --extract_text_only=true --output_dir=/tmp/
+node dist/fetch_single_page_main.js --url=${URL} --extract_text_only=true --output_dir=/tmp/
 ```
 
 TODO:
@@ -47,21 +47,21 @@ UseTLS=YES
 
 ## Create a script to fetch articles and send email
 
-`~/data/run_hackernews.sh`
+`$HOME/data/run_hackernews.sh`
 
 ```bash
 #!/bin/bash -l
 
 timestamp=`date "+%Y-%m-%d"`
 filename="${timestamp}-hackernews.txt"
-output_file="~/data/${filename}"
+output_file="$HOME/data/${filename}"
 
 cd ~/code/puppeteer-page-content
-~/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=~/data/hackernews 2>&1 | tee ${output_file}
+$HOME/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=$HOME/data/hackernews 2>&1 | tee ${output_file}
 
 {
-  echo "From: <your_email>@gmail.com"
-  echo "To: <your_email>@gmail.com"
+  echo "From: ${FROM_EMAIL}"
+  echo "To: ${TO_EMAIL}"
   echo "Subject: ${filename}"
   echo ""
   cat "${output_file}" | grep -P "^\d+ \|"
@@ -73,7 +73,7 @@ ssmtp -t < /tmp/email.txt
 **NOTE**:
 
 - Set the correct `node` path. Use `node` can result in `/usr/bin/node` which can be different from local/preferred `node`.
-- `-l` in `#!/bin/bash -l` is important to load ~/.bash_profile, which should contain `OPENAI_API_KEY` ([Source](https://stackoverflow.com/a/51591762/956507))
+- `-l` in `#!/bin/bash -l` is important to load ~/.bash_profile, which should contain `OPENAI_API_KEY`, `TO_EMAIL`, `FROM_EMAIL` ([Source](https://stackoverflow.com/a/51591762/956507))
 
 ## Cron job
 
