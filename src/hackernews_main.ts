@@ -124,7 +124,7 @@ const fetch_stories = async (
     console.log(`${story.title} | ${url}`);
 
     if (!url) {
-      console.log(JSON.stringify(story));
+      console.error(JSON.stringify(story));
       continue;
     }
     const outputFolder = path.join(data_dir, storyId.toString());

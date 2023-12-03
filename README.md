@@ -57,7 +57,7 @@ filename="${timestamp}-hackernews.txt"
 output_file="$HOME/data/${filename}"
 
 cd $HOME/code/puppeteer-page-content
-$HOME/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=$HOME/data/hackernews 2>&1 | tee ${output_file}
+$HOME/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=$HOME/data/hackernews | tee ${output_file}
 
 {
   echo "From: ${FROM_EMAIL}"
