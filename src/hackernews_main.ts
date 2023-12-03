@@ -1,9 +1,12 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
 import * as path from 'path';
+import moment from 'moment';
 import { promisify } from 'util';
 import { Distiller } from './extractor';
 import { HackerNews } from './hackernews';
+import { Digestor } from './digest';
+import { PageFolder } from './page_content';
 
 const writeFileAsync = promisify(fs.writeFile);
 
@@ -20,6 +23,11 @@ const argv = yargs.options({
     default: 'best',
     describe: 'which stories? Best or top?',
   },
+  do_digest: {
+    type: 'boolean',
+    default: true,
+    describe: 'Whether to process the article content such as summarize.',
+  },
 }).argv as any;
 
 const getStory = async (story_type: string) => {
@@ -32,24 +40,104 @@ const getStory = async (story_type: string) => {
   }
 };
 
-Distiller.perform({ extractTextOnly: true }, async (distiller: Distiller) => {
-  const stories = await getStory(argv.story_type);
+class UrlDatabase {
+  constructor(public urls: Set<string>) {}
+
+  static fromFile(urls_file: string): UrlDatabase {
+    const urls = fs.existsSync(urls_file)
+      ? fs
+          .readFileSync(urls_file, 'utf-8')
+          .split(/\r?\n/)
+          .filter((line) => line.length > 0)
+      : [];
+    return new UrlDatabase(new Set(urls));
+  }
+
+  static readAndBackup(folder: string): UrlDatabase {
+    const urls_file = path.join(folder, 'urls.txt');
+    const url_db = UrlDatabase.fromFile(urls_file);
+    url_db.backup(folder);
+    return url_db;
+  }
+
+  // Writes the current database to a given file.
+  writeToFile(output_file: string) {
+    fs.writeFileSync(output_file, Array.from(this.urls).join('\n'), 'utf-8');
+  }
+
+  // Writes the current database to the file `urls.txt` in a given folder.
+  writeDatabase(folder: string) {
+    const output_file = path.join(folder, 'urls.txt');
+    this.writeToFile(output_file);
+  }
+
+  // Backups the current database to a file in a given folder.
+  backup(folder: string) {
+    const timestamp = moment().format('YYYY-MM-DD-HHmmss');
+    const backup_file = path.join(folder, `urls-${timestamp}.txt`);
+    this.writeToFile(backup_file);
+  }
+
+  // Checks whether a given URL exists in the database.
+  contains = (url: string) => this.urls.has(url);
+
+  // Adds a URL to database.
+  add = (url: string) => this.urls.add(url);
+}
+
+// Unsed. Keep it here for end-to-end testing.
+const sample_stories: any[] = [
+  JSON.parse(`
+    {
+      "id": 38292915,
+      "title": "I spent 3 years working on a coat hanger [video]",
+      "type": "story",
+      "url": "https://www.youtube.com/watch?v=vREokZa4dNU"
+    }`),
+  JSON.parse(`
+    {
+      "id": 38292409,
+      "title": "Google resumes transition to Manifest V3 for Chrome extensions",
+      "type": "story",
+      "url": "https://developer.chrome.com/blog/resuming-the-transition-to-mv3/"
+    }`),
+];
+
+const fetch_stories = async (
+  distiller: Distiller,
+  data_dir: string,
+  do_digest: boolean,
+  stories: any[]
+) => {
+  if (!fs.existsSync(data_dir)) fs.mkdirSync(data_dir, { recursive: true });
+
+  // Read and backup the current urls.
+  const url_db = UrlDatabase.readAndBackup(data_dir);
 
   for (const story of stories) {
     const url: string = story.url;
+    if (url_db.contains(url)) continue;
+
     const storyId: number = story.id;
-    console.log(`${storyId} | ${story.title} | ${url}`);
+    console.log('-'.repeat(80));
+    console.log(`https://news.ycombinator.com/item?id=${storyId}`);
+    console.log(`${story.title} | ${url}`);
+
     if (!url) {
       console.log(JSON.stringify(story));
       continue;
     }
-    const outputFolder = path.join(argv.output_dir, storyId.toString());
-    const outputStoryJsonFile = path.join(outputFolder, 'story.json');
+    const outputFolder = path.join(data_dir, storyId.toString());
+    const outputStoryJsonFile = new PageFolder(outputFolder).story_file();
     // Ignore if the content was distilled.
     if (fs.existsSync(outputStoryJsonFile)) continue;
 
     try {
       const distilledPage = await distiller.distilPage(url);
+      if (do_digest) {
+        distilledPage.processed = await Digestor.processPage(distilledPage);
+        console.log(distilledPage.processed);
+      }
       fs.mkdirSync(outputFolder, { recursive: true });
       await distilledPage.write(outputFolder);
       writeFileAsync(
@@ -57,8 +145,22 @@ Distiller.perform({ extractTextOnly: true }, async (distiller: Distiller) => {
         JSON.stringify(story, null, 2),
         'utf8'
       );
+
+      url_db.add(url);
     } catch (error) {
-      console.log('Error:', error);
+      console.error('Error:', error);
     }
   }
-});
+
+  url_db.writeDatabase(data_dir);
+};
+
+const distill_hackernews = async (distiller: Distiller) => {
+  const data_dir = argv.output_dir;
+  // Fetch the new stories.
+  const stories = await getStory(argv.story_type);
+  await fetch_stories(distiller, data_dir, argv.do_digest, stories);
+};
+
+// Fetch the Hackernews stories.
+Distiller.perform({ extractTextOnly: true }, distill_hackernews);

@@ -64,7 +64,7 @@ $HOME/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=
   echo "To: ${TO_EMAIL}"
   echo "Subject: ${filename}"
   echo ""
-  cat "${output_file}" | grep -P "^\d+ \|"
+  cat "${output_file}"
 } > /tmp/email.txt
 
 ssmtp -t < /tmp/email.txt

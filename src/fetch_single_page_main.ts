@@ -21,11 +21,10 @@ Distiller.perform(
     console.log(page.content);
 
     if (argv.do_digest) {
-      const processed = await Digestor.processPage(page);
+      page.processed = await Digestor.processPage(page);
       console.log('-'.repeat(80));
-      console.log(processed);
+      console.log(page.processed);
       // How to make it as a part of the page?
-      page.processed = processed;
     }
 
     if (argv.output_dir) {
