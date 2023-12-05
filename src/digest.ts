@@ -14,12 +14,13 @@ export class Digestor {
 
   static async processPage(page: WebPageContent): Promise<string | null> {
     const systemPrompt = `You are an helpful assistant.
-You read the given article carefully, process its content and give me the main information to help me understand the article faster.
+You read the given article carefully, process its content and give me the main information (in direct summarization style) to help me understand the article faster.
+A direct summarization means to describe the content directly as you are the author of the article. You rewrite the main points of the article in the precise and concise way.
 `;
     const prompt = `
 Please generate the JSON file with the following information and format:
 {
-  summary: "<direct summary with the most important points in about 3-5 sentences>",
+  summary: "<direct summary with the most important points in about 3-5 sentences.>",
   tags: [comma-separated list of the main topic of the articles],
   about_ai: true/false depending on whether the article is about Artificial Intelligence.
 }
