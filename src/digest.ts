@@ -19,7 +19,7 @@ You read the given article carefully, process its content and give me the main i
     const prompt = `
 Please generate the JSON file with the following information and format:
 {
-  summary: "<article summary with the most important points in about 3-5 sentences>",
+  summary: "<direct summary with the most important points in about 3-5 sentences>",
   tags: [comma-separated list of the main topic of the articles],
   about_ai: true/false depending on whether the article is about Artificial Intelligence.
 }
