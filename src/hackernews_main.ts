@@ -81,8 +81,11 @@ class UrlDatabase {
   // Checks whether a given URL exists in the database.
   contains = (url: string) => this.urls.has(url);
 
-  // Adds a URL to database.
+  // Adds a URL to the database.
   add = (url: string) => this.urls.add(url);
+
+  // Removes a URL from the database.
+  remove = (url: string) => this.urls.delete(url);
 }
 
 // Unsed. Keep it here for end-to-end testing.
@@ -127,6 +130,13 @@ const fetch_stories = async (
       console.error(JSON.stringify(story));
       continue;
     }
+
+    // TODO: have a process function which return true/false depending on
+    // whether the URL is fetched successfully, and add to the database only
+    // the successful ones.
+    // Add the URL to the database.
+    url_db.add(url);
+
     const outputFolder = path.join(data_dir, storyId.toString());
     // Contains information about the story, and is used as an indicator that
     // the page was distilled.
@@ -136,7 +146,8 @@ const fetch_stories = async (
       // If there's processed data, print them out.
       const processedFile = new PageFolder(outputFolder).processed_file();
       if (fs.existsSync(processedFile)) {
-        console.log(fs.readFileSync(processedFile));
+        const processed = JSON.parse(fs.readFileSync(processedFile, 'utf-8'));
+        if (processed) console.log(processed);
       }
       continue;
     }
@@ -154,9 +165,9 @@ const fetch_stories = async (
         JSON.stringify(story, null, 2),
         'utf8'
       );
-
-      url_db.add(url);
     } catch (error) {
+      // Remove the error URL from the database.
+      url_db.remove(url);
       console.error('Error:', error);
     }
   }
@@ -167,8 +178,8 @@ const fetch_stories = async (
 const distill_hackernews = async (distiller: Distiller) => {
   const data_dir = argv.output_dir;
   // Fetch the new stories.
-  const stories = await getStory(argv.story_type);
-  await fetch_stories(distiller, data_dir, argv.do_digest, stories);
+  // const stories = await getStory(argv.story_type);
+  await fetch_stories(distiller, data_dir, argv.do_digest, sample_stories);
 };
 
 // Fetch the Hackernews stories.
