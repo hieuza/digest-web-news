@@ -128,9 +128,18 @@ const fetch_stories = async (
       continue;
     }
     const outputFolder = path.join(data_dir, storyId.toString());
+    // Contains information about the story, and is used as an indicator that
+    // the page was distilled.
     const outputStoryJsonFile = new PageFolder(outputFolder).story_file();
-    // Ignore if the content was distilled.
-    if (fs.existsSync(outputStoryJsonFile)) continue;
+    // If the content was distilled, load and print the processed.
+    if (fs.existsSync(outputStoryJsonFile)) {
+      // If there's processed data, print them out.
+      const processedFile = new PageFolder(outputFolder).processed_file();
+      if (fs.existsSync(processedFile)) {
+        console.log(fs.readFileSync(processedFile));
+      }
+      continue;
+    }
 
     try {
       const distilledPage = await distiller.distilPage(url);
