@@ -179,7 +179,7 @@ const distill_hackernews = async (distiller: Distiller) => {
   const data_dir = argv.output_dir;
   // Fetch the new stories.
   const stories = await getStory(argv.story_type);
-  // await fetch_stories(distiller, data_dir, argv.do_digest, sample_stories);
+  await fetch_stories(distiller, data_dir, argv.do_digest, stories);
 };
 
 // Fetch the Hackernews stories.
