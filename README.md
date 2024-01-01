@@ -9,6 +9,7 @@ nvm install --lts
 
 # Install the required packages.
 npm install
+npm install -g ts-node typescript '@types/node'
 
 # Compile the TypeScript code.
 tsc
@@ -91,3 +92,22 @@ MAILTO=""
 - Uncomment `#cron.*` in `/etc/rsyslog.d/50-default.conf`
 - Restart `rsyslog`: `sudo service rsyslog restart`
 - The log: `/var/log/cron.log`
+
+## Raspberry Pi
+
+```
+# install chromium-browser
+sudo get install chromium-browser
+```
+
+Make a little change to the extractor.ts
+
+```
+-import * as puppeteer from 'puppeteer';
++import * as puppeteer from 'puppeteer-core';
+
+...
+
+-      const browser = await puppeteer.launch({ headless: 'new' });
++      const browser = await puppeteer.launch({ headless: 'new', executablePath: '/usr/bin/chromium-browser', product: 'chrome' });
+```
