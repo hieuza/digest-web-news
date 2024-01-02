@@ -30,7 +30,7 @@ TODO:
 
 # Set-up SSMTP and cron job to digest article daily (Ubuntu)
 
-Currently it fetches and sends the article headlines + URLs only. See a [sample](https://justpaste.it/bv6f7).
+See a [sample email content](https://justpaste.it/c9xer).
 
 ## Set-up Gmail account
 
