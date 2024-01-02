@@ -1,4 +1,7 @@
-Fetch and distill the content of web pages using DOM Distiller script.
+- Fetch and distill the content of web pages using DOM Distiller script.
+- Summarize the content via LLM API (e.g. OpenAI API).
+- Send emails.
+
 
 # General set-up
 
