@@ -43,20 +43,23 @@ export class Distiller {
 
   async distilPage(url: string): Promise<WebPageContent> {
     const page = await this.browser.newPage();
-    await page.goto(url);
-    await page.evaluate(this.domDistillerScript);
+    try {
+      await page.goto(url);
+      await page.evaluate(this.domDistillerScript);
 
-    // https://github.com/chromium/dom-distiller-dist/blob/main/proto/dom_distiller.proto
-    // 1 = extract_text_only: true
-    // 2 = debug_level: 0 -- log nothing. 3 -- everything.
-    // 3 = original_url
-    const result: any = await page.evaluate(`
+      // https://github.com/chromium/dom-distiller-dist/blob/main/proto/dom_distiller.proto
+      // 1 = extract_text_only: true
+      // 2 = debug_level: 0 -- log nothing. 3 -- everything.
+      // 3 = original_url
+      const result: any = await page.evaluate(`
         var options = { 1: ${this.extractTextOnly}, 2:0, 3: "${url}" };
         org.chromium.distiller.DomDistiller.applyWithOptions(options);
     `);
-    await page.close();
 
-    return WebPageContent.fromDistillationResult(result);
+      return WebPageContent.fromDistillationResult(result);
+    } finally {
+      await page.close();
+    }
   }
 
   async closeBrowser(): Promise<void> {
