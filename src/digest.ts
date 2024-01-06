@@ -1,6 +1,10 @@
 import { WebPageContent } from './page_content';
 import OpenAI from 'openai';
 
+const OPENAI_MODEL = 'gpt-3.5-turbo-1106'; // Use cheap option now :)
+const MAX_INPUT_TOKENS = 16000;
+const MAX_OUTPUT_TOKENS = 1024;
+
 // For a given page content, summarise it and classify the topics.
 export class Digestor {
   private static openai = (() => {
@@ -27,7 +31,7 @@ export class Digestor {
       console.warn('Missing OpenAI API Key. No processing.');
       return null;
     }
-    if (page.content.length / 4 > 8000) {
+    if (page.content.length / 4 > MAX_INPUT_TOKENS) {
       console.warn('Article too long. More than token limit. Ignore');
       return null;
     }
@@ -56,7 +60,8 @@ ${page.content}
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
       ],
-      model: 'gpt-4-1106-preview',
+      model: OPENAI_MODEL,
+      max_tokens: MAX_OUTPUT_TOKENS,
       response_format: { type: 'json_object' },
     });
     return response.choices[0].message.content;

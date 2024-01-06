@@ -54,7 +54,7 @@ export class Distiller {
       const result: any = await page.evaluate(`
         var options = { 1: ${this.extractTextOnly}, 2:0, 3: "${url}" };
         org.chromium.distiller.DomDistiller.applyWithOptions(options);
-    `);
+      `);
 
       return WebPageContent.fromDistillationResult(result);
     } finally {

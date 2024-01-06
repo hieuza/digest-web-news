@@ -51,30 +51,9 @@ UseSTARTTLS=YES
 UseTLS=YES
 ```
 
-## Create a script to fetch articles and send email
+## Script to fetch articles and send email
 
-`$HOME/data/run_hackernews.sh`
-
-```bash
-#!/bin/bash -l
-
-timestamp=`date "+%Y-%m-%d"`
-filename="${timestamp}-hackernews.txt"
-output_file="$HOME/data/${filename}"
-
-cd $HOME/code/puppeteer-page-content
-$HOME/.nvm/versions/node/v18.16.1/bin/node dist/hackernews_main.js --output_dir=$HOME/data/hackernews | tee ${output_file}
-
-{
-  echo "From: ${FROM_EMAIL}"
-  echo "To: ${TO_EMAIL}"
-  echo "Subject: ${filename}"
-  echo ""
-  cat "${output_file}"
-} > /tmp/email.txt
-
-ssmtp -t < /tmp/email.txt
-```
+Put the script to `$HOME/data/run_hackernews.sh`
 
 **NOTE**:
 
@@ -89,7 +68,7 @@ ssmtp -t < /tmp/email.txt
 # Disable cron job status email.
 MAILTO=""
 # Fetch and send email at 5AM everyday.
-0 5 * * * ~/data/run_hackernews.sh
+0 5 * * * ~/data/run_hackernews.sh  >> /var/log/run_hackernews.log 2>&1
 ```
 
 ### Optional: enable cron log
