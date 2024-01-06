@@ -1,5 +1,5 @@
 {
-  "name": "puppeteer-page-content",
+  "name": "digest-web-news",
   "version": "1.0.0",
   "description": "Fetch and distill the content of web pages using DOM Distiller script.",
   "main": "digest.js",

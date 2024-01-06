@@ -3,7 +3,17 @@ import OpenAI from 'openai';
 
 // For a given page content, summarise it and classify the topics.
 export class Digestor {
-  private static openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  private static openai = (() => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (apiKey) {
+      return new OpenAI({ apiKey: apiKey });
+    } else {
+      console.error(
+        'OPENAI_API_KEY is missing. No article content processing.'
+      );
+      return null;
+    }
+  })();
 
   static async processFolder(folder: string): Promise<string | null> {
     const page = await WebPageContent.fromFolder(folder);
@@ -13,6 +23,15 @@ export class Digestor {
   }
 
   static async processPage(page: WebPageContent): Promise<string | null> {
+    if (!this.openai) {
+      console.warn('Missing OpenAI API Key. No processing.');
+      return null;
+    }
+    if (page.content.length / 4 > 8000) {
+      console.warn('Article too long. More than token limit. Ignore');
+      return null;
+    }
+
     const systemPrompt = `You are an helpful assistant.
 You read the given article carefully, process its content and give me the main information (in direct summarization style) to help me understand the article faster.
 A direct summarization means to describe the content directly as you are the author of the article. You rewrite the main points of the article in the precise and concise way.
@@ -32,12 +51,12 @@ Content:
 ${page.content}
 `;
 
-    const response = await Digestor.openai.chat.completions.create({
+    const response = await this.openai.chat.completions.create({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
       ],
-      model: 'gpt-3.5-turbo-1106',
+      model: 'gpt-4-1106-preview',
       response_format: { type: 'json_object' },
     });
     return response.choices[0].message.content;

@@ -2,6 +2,8 @@
 - Summarize the content via LLM API (e.g. OpenAI API).
 - Send emails.
 
+A daily cron job running on a Raspberry Pi 3 B+ sends the digested daily news to webnews-101@googlegroups.com.
+Feel free to subscribe to that [Google group](https://groups.google.com/g/webnews-101).
 
 # General set-up
 

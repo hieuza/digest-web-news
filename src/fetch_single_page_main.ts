@@ -7,7 +7,7 @@ const argv = yargs.options({
   url: { type: 'string', demandOption: true },
   output_dir: { type: 'string', demandOption: false },
   extract_text_only: { type: 'boolean', default: false },
-  do_digest: { type: 'boolean', default: false },
+  do_digest: { type: 'boolean', default: true },
 }).argv as any;
 
 Distiller.perform(
