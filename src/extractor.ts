@@ -1,4 +1,4 @@
-import * as puppeteer from 'puppeteer';
+import * as puppeteer from 'puppeteer-core';
 import { WebPageContent } from './page_content';
 import { domDistillerScript } from './domdistiller';
 
@@ -17,7 +17,7 @@ export class Distiller {
     options: DistilOptions = { extractTextOnly: false }
   ): Promise<Distiller> {
     if (!Distiller.distiller) {
-      const browser = await puppeteer.launch({ headless: 'new' });
+      const browser = await puppeteer.launch({ headless: 'new', executablePath: '/usr/bin/chromium-browser', product: 'chrome' });
       // Get DOM Distiller Script.
       Distiller.distiller = new Distiller(
         browser,
