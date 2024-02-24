@@ -23,6 +23,16 @@ const argv = yargs.options({
     default: 'best',
     describe: 'which stories? Best or top?',
   },
+  min_score: {
+    type: 'number',
+    default: -1,
+    describe: 'minimum score',
+  },
+  num_stories: {
+    type: 'number',
+    default: -1,
+    describe: 'number of selected top-score stories',
+  },
   do_digest: {
     type: 'boolean',
     default: true,
@@ -178,7 +188,14 @@ const fetch_stories = async (
 const distill_hackernews = async (distiller: Distiller) => {
   const data_dir = argv.output_dir;
   // Fetch the new stories.
-  const stories = await getStory(argv.story_type);
+  let stories = await getStory(argv.story_type);
+  if (argv.min_score > 0) {
+    stories = stories.filter((x) => x.score >= argv.min_score);
+  }
+  if (argv.num_stories > 0) {
+    stories.sort((x, y) => y.score - x.score);
+    stories = stories.slice(0, argv.num_stories);
+  }
   await fetch_stories(distiller, data_dir, argv.do_digest, stories);
 };
 
