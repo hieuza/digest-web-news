@@ -8,7 +8,12 @@ echo '---------------------------'
 echo Output to ${output_file}
 
 cd $HOME/code/digest-web-news
-$HOME/.nvm/versions/node/v20.10.0/bin/node dist/hackernews_main.js --min_score=200 --num_stories=25 --output_dir=$HOME/data/hackernews | tee ${output_file}
+$HOME/.nvm/versions/node/v20.10.0/bin/node dist/hackernews_main.js \
+  --min_score=100 \
+  --max_stories=25 \
+  --story_type=best \
+  --output_dir=$HOME/data/hackernews \
+  | tee ${output_file}
 
 {
   echo "From: ${FROM_EMAIL}"

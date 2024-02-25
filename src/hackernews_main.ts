@@ -28,10 +28,10 @@ const argv = yargs.options({
     default: -1,
     describe: 'minimum score',
   },
-  num_stories: {
+  max_stories: {
     type: 'number',
     default: -1,
-    describe: 'number of selected top-score stories',
+    describe: 'max number of output stories',
   },
   do_digest: {
     type: 'boolean',
@@ -120,14 +120,20 @@ const fetch_stories = async (
   distiller: Distiller,
   data_dir: string,
   do_digest: boolean,
-  stories: any[]
+  stories: any[],
+  min_score: number,
+  max_stories: number
 ) => {
   if (!fs.existsSync(data_dir)) fs.mkdirSync(data_dir, { recursive: true });
 
   // Read and backup the current urls.
   const url_db = UrlDatabase.readAndBackup(data_dir);
 
+  let num_output = 0;
   for (const story of stories) {
+    // Ignore the low score story.
+    if (min_score > 0 && story.score < min_score) continue;
+
     const url: string = story.url;
     if (url_db.contains(url)) continue;
 
@@ -175,6 +181,9 @@ const fetch_stories = async (
         JSON.stringify(story, null, 2),
         'utf8'
       );
+      num_output += 1;
+      // Output only max_stories.
+      if (max_stories > 0 && num_output > max_stories) break;
     } catch (error) {
       // Remove the error URL from the database.
       url_db.remove(url);
@@ -188,15 +197,15 @@ const fetch_stories = async (
 const distill_hackernews = async (distiller: Distiller) => {
   const data_dir = argv.output_dir;
   // Fetch the new stories.
-  let stories = await getStory(argv.story_type);
-  if (argv.min_score > 0) {
-    stories = stories.filter((x) => x.score >= argv.min_score);
-  }
-  if (argv.num_stories > 0) {
-    stories.sort((x, y) => y.score - x.score);
-    stories = stories.slice(0, argv.num_stories);
-  }
-  await fetch_stories(distiller, data_dir, argv.do_digest, stories);
+  const stories = await getStory(argv.story_type);
+  await fetch_stories(
+    distiller,
+    data_dir,
+    argv.do_digest,
+    stories,
+    argv.min_score,
+    argv.max_stories
+  );
 };
 
 // Fetch the Hackernews stories.
