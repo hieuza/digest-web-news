@@ -53,7 +53,10 @@ UseTLS=YES
 
 ## Script to fetch articles and send email
 
-Put the script to `$HOME/data/run_hackernews.sh`
+(Optional) Link the script to `$HOME/data/run_hackernews.sh`
+```bash
+ln -s ~/code/digest-web-news/run_hackernews.sh ~/data
+```
 
 **NOTE**:
 
