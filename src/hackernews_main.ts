@@ -129,6 +129,10 @@ const fetch_stories = async (
   // Read and backup the current urls.
   const url_db = UrlDatabase.readAndBackup(data_dir);
 
+  if (max_stories > 0) {
+    stories.sort((a, b) => b.score - a.score);
+  }
+
   let num_output = 0;
   for (const story of stories) {
     // Ignore the low score story.
