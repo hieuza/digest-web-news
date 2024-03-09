@@ -14,7 +14,8 @@ export class Distiller {
   ) {}
 
   static async launchBrowser(): Promise<any> {
-    const isRaspberryPi = os.platform() == 'linux' && os.arch() == 'arm';
+    const isRaspberryPi =
+      os.platform() == 'linux' && os.arch().startsWith('arm');
     if (isRaspberryPi) {
       const puppeteer = await import('puppeteer-core');
       return await puppeteer.launch({
