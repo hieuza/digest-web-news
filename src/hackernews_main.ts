@@ -138,13 +138,19 @@ const fetch_stories = async (
     // Ignore the low score story.
     if (min_score > 0 && story.score < min_score) continue;
 
-    const url: string = story.url;
+    const storyId: number = story.id;
+    const storyUrl: string = `https://news.ycombinator.com/item?id=${storyId}`;
+
+    const url: string = story.url || storyUrl;
     if (url_db.contains(url)) continue;
 
-    const storyId: number = story.id;
+    // No external URL for an original HackerNews post.
+    let subject: string = story.title;
+    if (story.url) subject += ` | ${story.url}`;
+
     console.log('-'.repeat(80));
-    console.log(`https://news.ycombinator.com/item?id=${storyId}`);
-    console.log(`${story.title} | ${url}`);
+    console.log(storyUrl);
+    console.log(subject);
 
     if (!url) {
       console.error(JSON.stringify(story));
@@ -189,8 +195,7 @@ const fetch_stories = async (
       // Output only max_stories.
       if (max_stories > 0 && num_output > max_stories) break;
     } catch (error) {
-      // Remove the error URL from the database.
-      url_db.remove(url);
+      // Fail to extract information, simply ignore the URLs.
       console.error('Error:', error);
     }
   }

@@ -1,4 +1,4 @@
-import * as puppeteer from 'puppeteer-core';
+import os from 'os';
 import { WebPageContent } from './page_content';
 import { domDistillerScript } from './domdistiller';
 
@@ -8,16 +8,33 @@ export class Distiller {
   private static distiller: Distiller;
 
   private constructor(
-    private browser: puppeteer.Browser,
+    private browser: any,
     private domDistillerScript: string,
     private extractTextOnly: boolean
   ) {}
+
+  static async launchBrowser(): Promise<any> {
+    const isRaspberryPi = os.platform() == 'linux' && os.arch() == 'arm';
+    if (isRaspberryPi) {
+      const puppeteer = await import('puppeteer-core');
+      return await puppeteer.launch({
+        headless: 'new',
+        executablePath: '/usr/bin/chromium-browser',
+        product: 'chrome',
+      });
+    } else {
+      const puppeteer = await import('puppeteer');
+      return await puppeteer.launch({
+        headless: 'new',
+      });
+    }
+  }
 
   static async create(
     options: DistilOptions = { extractTextOnly: false }
   ): Promise<Distiller> {
     if (!Distiller.distiller) {
-      const browser = await puppeteer.launch({ headless: 'new', executablePath: '/usr/bin/chromium-browser', product: 'chrome' });
+      const browser = await this.launchBrowser();
       // Get DOM Distiller Script.
       Distiller.distiller = new Distiller(
         browser,

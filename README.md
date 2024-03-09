@@ -82,19 +82,9 @@ MAILTO=""
 
 ## Raspberry Pi
 
+It requires to install Chromium browser on Raspberry Pi.
+
 ```
 # install chromium-browser
 sudo get install chromium-browser
-```
-
-Make a little change to the extractor.ts
-
-```
--import * as puppeteer from 'puppeteer';
-+import * as puppeteer from 'puppeteer-core';
-
-...
-
--      const browser = await puppeteer.launch({ headless: 'new' });
-+      const browser = await puppeteer.launch({ headless: 'new', executablePath: '/usr/bin/chromium-browser', product: 'chrome' });
 ```
