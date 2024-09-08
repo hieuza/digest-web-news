@@ -1,16 +1,29 @@
 import { WebPageContent } from './page_content';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const OPENAI_MODEL = 'gpt-3.5-turbo-1106'; // Use cheap option now :)
+const GENAI_MODEL = 'gemini-1.5-flash';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 1024;
 
 // For a given page content, summarise it and classify the topics.
 export class Digestor {
-  private static openai = (() => {
-    const apiKey = process.env.OPENAI_API_KEY;
+  private static model = (() => {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const systemInstruction = `You are an helpful assistant.
+You read the given article carefully, process its content and give me the main information (in direct summarization style) to help me understand the article faster.
+A direct summarization means to describe the content directly as you are the author of the article. You rewrite the main points of the article in the precise and concise way.
+`;
     if (apiKey) {
-      return new OpenAI({ apiKey: apiKey });
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: GENAI_MODEL,
+        systemInstruction: systemInstruction,
+        generationConfig: {
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          responseMimeType: 'application/json',
+        },
+      });
+      return model;
     } else {
       console.error(
         'OPENAI_API_KEY is missing. No article content processing.'
@@ -27,8 +40,8 @@ export class Digestor {
   }
 
   static async processPage(page: WebPageContent): Promise<string | null> {
-    if (!this.openai) {
-      console.warn('Missing OpenAI API Key. No processing.');
+    if (!this.model) {
+      console.warn('No generative model. No processing.');
       return null;
     }
     if (page.content.length / 4 > MAX_INPUT_TOKENS) {
@@ -36,10 +49,6 @@ export class Digestor {
       return null;
     }
 
-    const systemPrompt = `You are an helpful assistant.
-You read the given article carefully, process its content and give me the main information (in direct summarization style) to help me understand the article faster.
-A direct summarization means to describe the content directly as you are the author of the article. You rewrite the main points of the article in the precise and concise way.
-`;
     const prompt = `
 Please generate the JSON file with the following information and format:
 {
@@ -55,15 +64,7 @@ Content:
 ${page.content}
 `;
 
-    const response = await this.openai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      model: OPENAI_MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      response_format: { type: 'json_object' },
-    });
-    return response.choices[0].message.content;
+    const result = await this.model.generateContent(prompt);
+    return result.response.text();
   }
 }

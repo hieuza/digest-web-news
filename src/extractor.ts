@@ -19,14 +19,13 @@ export class Distiller {
     if (isRaspberryPi) {
       const puppeteer = await import('puppeteer-core');
       return await puppeteer.launch({
-        headless: 'new',
+        headless: true,
         executablePath: '/usr/bin/chromium-browser',
-        product: 'chrome',
       });
     } else {
       const puppeteer = await import('puppeteer');
       return await puppeteer.launch({
-        headless: 'new',
+        headless: true,
       });
     }
   }
