@@ -1,7 +1,7 @@
 import { WebPageContent } from './page_content';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GENAI_MODEL = 'gemini-1.5-flash';
+const GENAI_MODEL = 'gemini-2.0-flash';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 1024;
 
