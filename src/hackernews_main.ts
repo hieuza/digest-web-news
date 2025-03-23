@@ -173,7 +173,7 @@ const fetch_stories = async (
       const processedFile = new PageFolder(outputFolder).processed_file();
       if (fs.existsSync(processedFile)) {
         const processed = JSON.parse(fs.readFileSync(processedFile, 'utf-8'));
-        if (processed) console.log(processed);
+        Digestor.printProcessed(processed);
       }
       continue;
     }
@@ -182,7 +182,7 @@ const fetch_stories = async (
       const distilledPage = await distiller.distilPage(url);
       if (do_digest) {
         distilledPage.processed = await Digestor.processPage(distilledPage);
-        console.log(distilledPage.processed);
+        Digestor.printProcessed(distilledPage.processed);
       }
       fs.mkdirSync(outputFolder, { recursive: true });
       await distilledPage.write(outputFolder);

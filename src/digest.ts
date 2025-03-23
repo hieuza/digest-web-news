@@ -50,14 +50,16 @@ A direct summarization means to describe the content directly as you are the aut
     }
 
     const prompt = `
-Please generate the JSON file with the following information and format:
+Please generate a JSON file with the following structure based on the article provided below:
+
 {
-  summary: "<direct summary with the most important points in about 3-5 sentences.>",
-  tags: [comma-separated list of the main topic of the articles],
-  about_ai: true/false depending on whether the article is about Artificial Intelligence.
+  "full_content": <true if the article content is correctly associated with the title, false if the content is a failure message of page fetching>,
+  "summary": "<A concise summary of the article, highlighting the most important points in 3-5 sentences>",
+  "tags": ["<comma-separated list of the main topics of the article>"],
+  "about_ai": <true if the article is about Artificial Intelligence, false otherwise>
 }
 
-The article is given below:
+The article details are as follows:
 Title:
 ${page.headline}
 Content:
@@ -66,5 +68,19 @@ ${page.content}
 
     const result = await this.model.generateContent(prompt);
     return result.response.text();
+  }
+
+  // Print processed info if it contains the full content.
+  static printProcessed(processed: string | null) {
+    if (!processed) return;
+    const processed_json = JSON.parse(processed);
+    if (processed_json?.full_content) {
+      console.log(processed_json.summary);
+      console.log(
+        'Tags:',
+        processed_json.tags.join(', '),
+        processed_json.about_ai ? ' | AI' : ''
+      );
+    }
   }
 }

@@ -23,7 +23,7 @@ Distiller.perform(
     if (argv.do_digest) {
       page.processed = await Digestor.processPage(page);
       console.log('-'.repeat(80));
-      console.log(page.processed);
+      Digestor.printProcessed(page.processed);
       // How to make it as a part of the page?
     }
 
