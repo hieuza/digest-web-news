@@ -2,6 +2,7 @@ import os from 'os';
 import { WebPageContent } from './page_content';
 import { domDistillerScript } from './domdistiller';
 
+const PAGE_GOTO_OPTIONS = { timeout: 90000 };
 type DistilOptions = { extractTextOnly: boolean };
 
 export class Distiller {
@@ -61,7 +62,7 @@ export class Distiller {
   async distilPage(url: string): Promise<WebPageContent> {
     const page = await this.browser.newPage();
     try {
-      await page.goto(url);
+      await page.goto(url, PAGE_GOTO_OPTIONS);
       await page.evaluate(this.domDistillerScript);
 
       // https://github.com/chromium/dom-distiller-dist/blob/main/proto/dom_distiller.proto
