@@ -3,6 +3,7 @@
 timestamp=`date "+%Y-%m-%d-%H%M%S"`
 filename="${timestamp}-hackernews.txt"
 output_file="$HOME/data/${filename}"
+tmp_file="/tmp/${timestamp}-email.txt"
 
 echo '---------------------------'
 echo Output to ${output_file}
@@ -21,6 +22,7 @@ node dist/hackernews_main.js \
   echo "Subject: ${filename}"
   echo ""
   cat "${output_file}"
-} > /tmp/email.txt
+} > ${tmp_file}
 
-ssmtp -t < /tmp/email.txt
+ssmtp -t < ${tmp_file}
+
