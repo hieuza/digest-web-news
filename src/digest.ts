@@ -1,13 +1,14 @@
 import { WebPageContent } from './page_content';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GENAI_MODEL = 'gemini-2.0-flash';
+const GENAI_MODEL = 'gemini-2.5-flash';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 1024;
 
 // For a given page content, summarise it and classify the topics.
 export class Digestor {
   private static model = (() => {
+    const model_name = process.env.GENAI_MODEL || GENAI_MODEL;
     const apiKey = process.env.GOOGLE_API_KEY;
     const systemInstruction = `You are an helpful assistant.
 You read the given article carefully, process its content and give me the main information (in direct summarization style) to help me understand the article faster.
@@ -16,7 +17,7 @@ A direct summarization means to describe the content directly as you are the aut
     if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: GENAI_MODEL,
+        model: model_name,
         systemInstruction: systemInstruction,
         generationConfig: {
           maxOutputTokens: MAX_OUTPUT_TOKENS,
@@ -26,7 +27,7 @@ A direct summarization means to describe the content directly as you are the aut
       return model;
     } else {
       console.error(
-        'OPENAI_API_KEY is missing. No article content processing.'
+        'GOOGLE_API_KEY is missing. No article content processing.'
       );
       return null;
     }
