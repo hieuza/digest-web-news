@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const GENAI_MODEL = 'gemini-2.5-flash';
 const MAX_INPUT_TOKENS = 16000;
-const MAX_OUTPUT_TOKENS = 1024;
+const MAX_OUTPUT_TOKENS = 8192;
 
 // For a given page content, summarise it and classify the topics.
 export class Digestor {
