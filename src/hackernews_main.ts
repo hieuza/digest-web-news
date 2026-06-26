@@ -31,7 +31,17 @@ const argv = yargs.options({
   max_stories: {
     type: 'number',
     default: -1,
-    describe: 'max number of output stories',
+    describe: 'max number of output stories (deprecated, use max_output instead)',
+  },
+  max_candidates: {
+    type: 'number',
+    default: 30,
+    describe: 'max number of new stories to fetch/process',
+  },
+  max_output: {
+    type: 'number',
+    default: 10,
+    describe: 'max number of stories to output/print',
   },
   do_digest: {
     type: 'boolean',
@@ -122,81 +132,132 @@ const fetch_stories = async (
   do_digest: boolean,
   stories: any[],
   min_score: number,
-  max_stories: number
+  max_candidates: number,
+  max_output: number
 ) => {
   if (!fs.existsSync(data_dir)) fs.mkdirSync(data_dir, { recursive: true });
 
   // Read and backup the current urls.
   const url_db = UrlDatabase.readAndBackup(data_dir);
 
-  if (max_stories > 0) {
-    stories.sort((a, b) => b.score - a.score);
-  }
-
-  let num_output = 0;
+  // Collect candidate new stories to evaluate
+  const candidates: any[] = [];
   for (const story of stories) {
-    // Ignore the low score story.
     if (min_score > 0 && story.score < min_score) continue;
 
     const storyId: number = story.id;
     const storyUrl: string = `https://news.ycombinator.com/item?id=${storyId}`;
-
     const url: string = story.url || storyUrl;
-    if (url_db.contains(url)) continue;
 
-    // No external URL for an original HackerNews post.
+    if (url_db.contains(url)) continue;
+    if (!url) continue;
+
+    candidates.push(story);
+    if (max_candidates > 0 && candidates.length >= max_candidates) {
+      break;
+    }
+  }
+
+  const processedStories: {
+    story: any;
+    url: string;
+    storyUrl: string;
+    subject: string;
+    processed: string | null;
+  }[] = [];
+
+  for (const story of candidates) {
+    const storyId: number = story.id;
+    const storyUrl: string = `https://news.ycombinator.com/item?id=${storyId}`;
+    const url: string = story.url || storyUrl;
+
     let subject: string = story.title;
     if (story.url) subject += ` | ${story.url}`;
 
-    console.log('-'.repeat(80));
-    console.log(storyUrl);
-    console.log(subject);
-
-    if (!url) {
-      console.error(JSON.stringify(story));
-      continue;
-    }
-
-    // TODO: have a process function which return true/false depending on
-    // whether the URL is fetched successfully, and add to the database only
-    // the successful ones.
-    // Add the URL to the database.
+    // Add the URL to the database immediately to mark it as processed
     url_db.add(url);
 
     const outputFolder = path.join(data_dir, storyId.toString());
-    // Contains information about the story, and is used as an indicator that
-    // the page was distilled.
     const outputStoryJsonFile = new PageFolder(outputFolder).story_file();
-    // If the content was distilled, load and print the processed.
+
+    let processedText: string | null = null;
+
     if (fs.existsSync(outputStoryJsonFile)) {
-      // If there's processed data, print them out.
       const processedFile = new PageFolder(outputFolder).processed_file();
       if (fs.existsSync(processedFile)) {
-        const processed = JSON.parse(fs.readFileSync(processedFile, 'utf-8'));
-        Digestor.printProcessed(processed);
+        try {
+          // Read double-encoded JSON string
+          processedText = JSON.parse(fs.readFileSync(processedFile, 'utf-8'));
+        } catch (e) {
+          console.error(`Error reading processed file for story ${storyId}:`, e);
+        }
       }
-      continue;
+    } else {
+      try {
+        const distilledPage = await distiller.distilPage(url);
+        if (do_digest) {
+          processedText = await Digestor.processPage(distilledPage);
+          distilledPage.processed = processedText;
+        }
+        fs.mkdirSync(outputFolder, { recursive: true });
+        await distilledPage.write(outputFolder);
+        await writeFileAsync(
+          outputStoryJsonFile,
+          JSON.stringify(story, null, 2),
+          'utf8'
+        );
+      } catch (error) {
+        console.error(`Error processing story ${storyId}:`, error);
+      }
     }
 
-    try {
-      const distilledPage = await distiller.distilPage(url);
-      if (do_digest) {
-        distilledPage.processed = await Digestor.processPage(distilledPage);
-        Digestor.printProcessed(distilledPage.processed);
+    processedStories.push({
+      story,
+      url,
+      storyUrl,
+      subject,
+      processed: processedText
+    });
+  }
+
+  // Filter and sort the processed stories
+  let finalStories: typeof processedStories = [];
+  if (do_digest) {
+    const aiStories: typeof processedStories = [];
+    const nonAiStories: typeof processedStories = [];
+    const failedOrSkippedStories: typeof processedStories = [];
+
+    for (const ps of processedStories) {
+      if (ps.processed) {
+        try {
+          const obj = JSON.parse(ps.processed);
+          if (obj && obj.full_content === true) {
+            if (obj.about_ai === true) {
+              aiStories.push(ps);
+            } else {
+              nonAiStories.push(ps);
+            }
+            continue;
+          }
+        } catch (e) {
+          // Fall through to failedOrSkippedStories
+        }
       }
-      fs.mkdirSync(outputFolder, { recursive: true });
-      await distilledPage.write(outputFolder);
-      writeFileAsync(
-        outputStoryJsonFile,
-        JSON.stringify(story, null, 2),
-        'utf8'
-      );
-      num_output += 1;
-      // Output only max_stories.
-      if (max_stories > 0 && num_output > max_stories) break;
-    } catch (error) {
-      // Fail to extract information, simply ignore the URLs.
-      console.error('Error:', error);
+      failedOrSkippedStories.push(ps);
+    }
+
+    finalStories = [...aiStories, ...nonAiStories, ...failedOrSkippedStories].slice(0, max_output);
+  } else {
+    finalStories = processedStories.slice(0, max_output);
+  }
+
+  // Output/print the final selected list of stories
+  for (const item of finalStories) {
+    console.log('-'.repeat(80));
+    console.log(item.storyUrl);
+    console.log(item.subject);
+    if (do_digest && item.processed) {
+      Digestor.printProcessed(item.processed);
     }
   }
 
@@ -213,7 +274,8 @@ const distill_hackernews = async (distiller: Distiller) => {
     argv.do_digest,
     stories,
     argv.min_score,
-    argv.max_stories
+    argv.max_candidates,
+    argv.max_output
   );
 };
 

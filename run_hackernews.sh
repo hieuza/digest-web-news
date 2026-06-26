@@ -11,7 +11,8 @@ echo Output to ${output_file}
 cd $HOME/code/digest-web-news
 node dist/hackernews_main.js \
   --min_score=100 \
-  --max_stories=0 \
+  --max_candidates=30 \
+  --max_output=10 \
   --story_type=best \
   --output_dir=$HOME/data/hackernews \
   | tee ${output_file}
