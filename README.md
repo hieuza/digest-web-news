@@ -73,9 +73,12 @@ node dist/hackernews_main.js \
 - `--do_digest`: Whether to generate AI summaries and topic tags (default: `true`).
 
 ### B. Distill a Single Web Page
+
+Extract and distill clean article content from a web page (e.g. Paul Graham's essay *"How to Work Hard"*):
+
 ```bash
-URL=https://example.com/article
-node dist/fetch_single_page_main.js --url=${URL} --extract_text_only=true --output_dir=/tmp/
+URL="https://paulgraham.com/hwh.html"
+node dist/fetch_single_page_main.js --url="${URL}" --extract_text_only=true --output_dir=/tmp/
 ```
 
 ---

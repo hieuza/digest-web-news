@@ -22,11 +22,19 @@ export class Distiller {
       return await puppeteer.launch({
         headless: true,
         executablePath: '/usr/bin/chromium-browser',
+        timeout: 60000,
+        args: [
+          '--disable-gpu',
+          '--disable-dev-shm-usage',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+        ],
       });
     } else {
       const puppeteer = await import('puppeteer');
       return await puppeteer.launch({
         headless: true,
+        args: ['--disable-gpu', '--disable-dev-shm-usage'],
       });
     }
   }

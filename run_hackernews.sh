@@ -1,4 +1,5 @@
 #!/bin/bash -l
+set -e -o pipefail
 
 timestamp=`date "+%Y-%m-%d-%H%M%S"`
 filename="${timestamp}-hackernews.txt"
@@ -22,6 +23,11 @@ node dist/hackernews_main.js \
   --db_path="${db_path}" \
   | tee "${output_file}"
 
+if [ ! -s "${output_file}" ]; then
+  echo "ERROR: Output file '${output_file}' is empty or missing. Skipping email." >&2
+  exit 1
+fi
+
 {
   echo "From: ${FROM_EMAIL}"
   echo "To: ${TO_EMAIL}"
@@ -31,4 +37,4 @@ node dist/hackernews_main.js \
 } > "${tmp_file}"
 
 ssmtp -t < "${tmp_file}"
-
+rm -f "${tmp_file}"
