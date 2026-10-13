@@ -3,26 +3,13 @@ import yargs from 'yargs';
 import fs from 'fs';
 import path from 'path';
 
-const argv = yargs.options({
-  input_dir: {
-    type: 'string',
-    demandOption: true,
-    describe: 'Input folder containing a subfolder for each story.',
-  },
-  output_file: {
-    type: 'string',
-    demandOption: true,
-    describe: 'Output file containing URLs per line.',
-  },
-}).argv as any;
-
-const readSubfolders = (input_dir: string) =>
+export const readSubfolders = (input_dir: string) =>
   fs
-    .readdirSync(argv.input_dir, { withFileTypes: true })
+    .readdirSync(input_dir, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
     .map((direct) => path.join(input_dir, direct.name));
 
-const readUrl = (folder: string) => {
+export const readUrl = (folder: string) => {
   const story_file = path.join(folder, 'story.json');
   if (!fs.existsSync(story_file)) {
     return null;
@@ -37,11 +24,29 @@ const readUrl = (folder: string) => {
   }
 };
 
-(() => {
-  const subfolders: string[] = readSubfolders(argv.input_dir);
+export const inventoryUrls = (input_dir: string, output_file: string) => {
+  const subfolders: string[] = readSubfolders(input_dir);
   const urls: string[] = subfolders
     .map((folder) => readUrl(folder))
     .filter((url) => url !== null);
 
-  fs.writeFileSync(argv.output_file, urls.join('\n'), 'utf-8');
-})();
+  fs.writeFileSync(output_file, urls.join('\n'), 'utf-8');
+  return urls;
+};
+
+if (require.main === module) {
+  const argv = yargs.options({
+    input_dir: {
+      type: 'string',
+      demandOption: true,
+      describe: 'Input folder containing a subfolder for each story.',
+    },
+    output_file: {
+      type: 'string',
+      demandOption: true,
+      describe: 'Output file containing URLs per line.',
+    },
+  }).argv as any;
+
+  inventoryUrls(argv.input_dir, argv.output_file);
+}

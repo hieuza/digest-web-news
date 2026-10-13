@@ -15,11 +15,12 @@ export class HackerNews {
 
   static async fetchStories(url: string): Promise<Story[]> {
     const itemIds = await this.fetchJson(url);
+    if (!Array.isArray(itemIds)) return [];
     const stories = [];
     for (const itemId of itemIds) {
       const story = await this.fetchItemJson(itemId);
-      // Keep the type `story` only.
-      if (story.type === 'story') {
+      // Keep the type `story` only, guarding against null (deleted) items.
+      if (story && typeof story === 'object' && story.type === 'story') {
         stories.push(story);
       }
     }

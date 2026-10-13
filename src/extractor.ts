@@ -39,6 +39,14 @@ export class Distiller {
     }
   }
 
+  static fromBrowser(
+    browser: any,
+    extractTextOnly: boolean = false,
+    script: string = domDistillerScript
+  ): Distiller {
+    return new Distiller(browser, script, extractTextOnly);
+  }
+
   static async create(
     options: DistilOptions = { extractTextOnly: false }
   ): Promise<Distiller> {
@@ -63,7 +71,7 @@ export class Distiller {
     try {
       await task(distiller);
     } finally {
-      distiller.closeBrowser();
+      await distiller.closeBrowser();
     }
   }
 
@@ -77,10 +85,14 @@ export class Distiller {
       // 1 = extract_text_only: true
       // 2 = debug_level: 0 -- log nothing. 3 -- everything.
       // 3 = original_url
-      const result: any = await page.evaluate(`
-        var options = { 1: ${this.extractTextOnly}, 2:0, 3: "${url}" };
-        org.chromium.distiller.DomDistiller.applyWithOptions(options);
-      `);
+      const result: any = await page.evaluate(
+        (extractTextOnly: boolean, targetUrl: string) => {
+          var options = { 1: extractTextOnly, 2: 0, 3: targetUrl };
+          return (window as any).org.chromium.distiller.DomDistiller.applyWithOptions(options);
+        },
+        this.extractTextOnly,
+        url
+      );
 
       return WebPageContent.fromDistillationResult(result);
     } finally {
@@ -89,6 +101,9 @@ export class Distiller {
   }
 
   async closeBrowser(): Promise<void> {
-    await this.browser.close();
+    if (this.browser) {
+      await this.browser.close();
+    }
+    Distiller.distiller = undefined as any;
   }
 }

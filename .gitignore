@@ -1,2 +1,14 @@
+!/src/
+!/src/**
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/README.md
+!/LICENSE
+!/run_hackernews.sh
+!/.gitignore
+
 node_modules/
 dist/
+*.db
+.env

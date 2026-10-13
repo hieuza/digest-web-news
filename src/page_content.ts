@@ -1,4 +1,4 @@
-import { readFile, writeFile, existsSync } from 'fs';
+import { readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 
@@ -33,10 +33,21 @@ export class WebPageContent {
 
   // Returns headline and content.
   private static parseDistillationResult(result: any): [string, string] {
-    return [result['1'], result['2']['1']];
+    if (!result || typeof result !== 'object') {
+      return ['', ''];
+    }
+    const headline = typeof result['1'] === 'string' ? result['1'] : '';
+    const content =
+      result['2'] && typeof result['2']['1'] === 'string'
+        ? result['2']['1']
+        : '';
+    return [headline, content];
   }
 
   async write(folder: string) {
+    if (!existsSync(folder)) {
+      mkdirSync(folder, { recursive: true });
+    }
     const content_file = new PageFolder(folder).content_file();
     await writeFileAsync(
       content_file,

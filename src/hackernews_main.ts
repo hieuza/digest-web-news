@@ -2,63 +2,64 @@ import yargs from 'yargs';
 import { Distiller } from './extractor';
 import { HackerNews } from './hackernews';
 import { Digestor } from './digest';
-import { SqliteDatabase, getDatabasePath } from './db';
+import { SqliteDatabase, getDatabasePath, parseProcessedJson } from './db';
 
-const argv = yargs.options({
-  db_path: {
-    type: 'string',
-    default: getDatabasePath(),
-    describe: 'Path to SQLite database file.',
-  },
-  output_dir: {
-    type: 'string',
-    default: '',
-    describe: 'Deprecated: legacy output folder (now uses SQLite).',
-  },
-  story_type: {
-    type: 'string',
-    choices: ['top', 'best'],
-    default: 'best',
-    describe: 'which stories? Best or top?',
-  },
-  min_score: {
-    type: 'number',
-    default: -1,
-    describe: 'minimum score',
-  },
-  max_stories: {
-    type: 'number',
-    default: -1,
-    describe: 'max number of output stories (deprecated, use max_output instead)',
-  },
-  max_candidates: {
-    type: 'number',
-    default: 30,
-    describe: 'max number of new stories to fetch/process',
-  },
-  max_output: {
-    type: 'number',
-    default: 10,
-    describe: 'max number of stories to output/print',
-  },
-  do_digest: {
-    type: 'boolean',
-    default: true,
-    describe: 'Whether to process the article content such as summarize.',
-  },
-}).argv as any;
+export const parseArgs = () =>
+  yargs.options({
+    db_path: {
+      type: 'string',
+      default: getDatabasePath(),
+      describe: 'Path to SQLite database file.',
+    },
+    output_dir: {
+      type: 'string',
+      default: '',
+      describe: 'Deprecated: legacy output folder (now uses SQLite).',
+    },
+    story_type: {
+      type: 'string',
+      choices: ['top', 'best'],
+      default: 'best',
+      describe: 'which stories? Best or top?',
+    },
+    min_score: {
+      type: 'number',
+      default: -1,
+      describe: 'minimum score',
+    },
+    max_stories: {
+      type: 'number',
+      default: -1,
+      describe: 'max number of output stories (deprecated, use max_output instead)',
+    },
+    max_candidates: {
+      type: 'number',
+      default: 30,
+      describe: 'max number of new stories to fetch/process',
+    },
+    max_output: {
+      type: 'number',
+      default: 10,
+      describe: 'max number of stories to output/print',
+    },
+    do_digest: {
+      type: 'boolean',
+      default: true,
+      describe: 'Whether to process the article content such as summarize.',
+    },
+  }).argv as any;
 
-const getStory = async (story_type: string) => {
+export const getStory = async (story_type: string) => {
   if (story_type === 'best') {
     return await HackerNews.fetchBestStories();
   } else if (story_type === 'top') {
     return await HackerNews.fetchTopStories();
   } else {
-    throw TypeError(`Unknown story type: ${argv.story_type}`);
+    throw TypeError(`Unknown story type: ${story_type}`);
   }
 };
 
-const fetch_stories = async (
+export const fetch_stories = async (
   distiller: Distiller,
   db: SqliteDatabase,
   do_digest: boolean,
@@ -135,9 +136,9 @@ const fetch_stories = async (
     for (const ps of processedStories) {
       if (ps.processed) {
         try {
-          const obj = JSON.parse(ps.processed);
-          if (obj && obj.full_content === true) {
-            if (obj.about_ai === true) {
+          const obj = parseProcessedJson(ps.processed);
+          if (obj && obj.full_content === 1) {
+            if (obj.about_ai === 1) {
               aiStories.push(ps);
             } else {
               nonAiStories.push(ps);
@@ -171,25 +172,31 @@ const fetch_stories = async (
   }
 };
 
-const distill_hackernews = async (distiller: Distiller) => {
-  const dbPath = argv.db_path || getDatabasePath();
+export const distill_hackernews = async (
+  distiller: Distiller,
+  cliArgs?: any
+) => {
+  const args = cliArgs || parseArgs();
+  const dbPath = args.db_path || getDatabasePath();
   const db = new SqliteDatabase(dbPath);
   try {
     // Fetch the new stories.
-    const stories = await getStory(argv.story_type);
+    const stories = await getStory(args.story_type);
     await fetch_stories(
       distiller,
       db,
-      argv.do_digest,
+      args.do_digest,
       stories,
-      argv.min_score,
-      argv.max_candidates,
-      argv.max_output
+      args.min_score,
+      args.max_candidates,
+      args.max_output
     );
   } finally {
     db.close();
   }
 };
 
-// Fetch the Hackernews stories.
-Distiller.perform({ extractTextOnly: true }, distill_hackernews);
+// Fetch the Hackernews stories when run directly.
+if (require.main === module) {
+  Distiller.perform({ extractTextOnly: true }, distill_hackernews);
+}

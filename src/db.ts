@@ -11,7 +11,7 @@ export function getDatabasePath(): string {
   );
 }
 
-function slugify(text: string): string {
+export function slugify(text: string): string {
   if (!text) return 'unknown';
   const slug = text
     .trim()
@@ -22,7 +22,7 @@ function slugify(text: string): string {
   return slug || 'unknown';
 }
 
-function parseProcessedJson(rawText: string | null): {
+export function parseProcessedJson(rawText: string | null): {
   summary: string | null;
   tags: string[];
   about_ai: number | null;
