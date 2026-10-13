@@ -198,5 +198,8 @@ export const distill_hackernews = async (
 
 // Fetch the Hackernews stories when run directly.
 if (require.main === module) {
-  Distiller.perform({ extractTextOnly: true }, distill_hackernews);
+  const cliArgs = parseArgs();
+  Distiller.perform({ extractTextOnly: true }, (distiller) =>
+    distill_hackernews(distiller, cliArgs)
+  );
 }
