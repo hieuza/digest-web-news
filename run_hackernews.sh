@@ -47,10 +47,17 @@ fi
   cat "${output_html}"
 } > "${tmp_file}"
 
-if id -Gn | grep -qw mail; then
-  /usr/sbin/ssmtp -t < "${tmp_file}"
+SSMTP_BIN="/usr/sbin/ssmtp"
+if ! command -v "$SSMTP_BIN" >/dev/null 2>&1; then
+  SSMTP_BIN="ssmtp"
+fi
+
+if "$SSMTP_BIN" -t < "${tmp_file}" 2>/dev/null; then
+  echo "Digest email successfully sent to ${to_email}."
+elif ssh -o StrictHostKeyChecking=no -o BatchMode=yes localhost "/usr/sbin/ssmtp -t" < "${tmp_file}" 2>/dev/null; then
+  echo "Digest email successfully sent to ${to_email}."
 else
-  ssh -o StrictHostKeyChecking=no localhost "/usr/sbin/ssmtp -t" < "${tmp_file}"
+  echo "ERROR: Failed to deliver email via ssmtp." >&2
+  exit 1
 fi
 rm -f "${tmp_file}"
-echo "Digest email successfully sent to ${to_email}."
