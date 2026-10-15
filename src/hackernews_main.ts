@@ -1,8 +1,11 @@
+import fs from 'fs';
+import path from 'path';
 import yargs from 'yargs';
 import { Distiller } from './extractor';
 import { HackerNews } from './hackernews';
 import { Digestor } from './digest';
 import { SqliteDatabase, getDatabasePath, parseProcessedJson } from './db';
+import { renderHtmlDigest, DigestItem } from './formatter';
 
 export const parseArgs = () =>
   yargs.options({
@@ -15,6 +18,11 @@ export const parseArgs = () =>
       type: 'string',
       default: '',
       describe: 'Deprecated: legacy output folder (now uses SQLite).',
+    },
+    html_output_path: {
+      type: 'string',
+      default: '',
+      describe: 'Path to write formatted HTML digest file.',
     },
     story_type: {
       type: 'string',
@@ -66,8 +74,9 @@ export const fetch_stories = async (
   stories: any[],
   min_score: number,
   max_candidates: number,
-  max_output: number
-) => {
+  max_output: number,
+  html_output_path?: string
+): Promise<DigestItem[]> => {
   // Collect candidate new stories to evaluate
   const candidates: any[] = [];
   for (const story of stories) {
@@ -161,6 +170,35 @@ export const fetch_stories = async (
     finalStories = processedStories.slice(0, max_output);
   }
 
+  // Convert final stories to DigestItem format
+  const digestItems: DigestItem[] = finalStories.map((item) => {
+    let summary: string | null = null;
+    let tags: string[] = [];
+    let aboutAi: boolean = false;
+
+    if (item.processed) {
+      try {
+        const parsed = parseProcessedJson(item.processed);
+        summary = parsed.summary;
+        tags = parsed.tags || [];
+        aboutAi = parsed.about_ai === 1;
+      } catch (e) {}
+    }
+
+    return {
+      id: item.story?.id || 0,
+      title: item.story?.title || item.subject,
+      url: item.url,
+      storyUrl: item.storyUrl,
+      score: item.story?.score || 0,
+      by: item.story?.by,
+      descendants: item.story?.descendants,
+      summary,
+      tags,
+      about_ai: aboutAi,
+    };
+  });
+
   // Output/print the final selected list of stories
   for (const item of finalStories) {
     console.log('-'.repeat(80));
@@ -170,6 +208,17 @@ export const fetch_stories = async (
       Digestor.printProcessed(item.processed);
     }
   }
+
+  if (html_output_path) {
+    const htmlContent = renderHtmlDigest(digestItems);
+    fs.mkdirSync(path.dirname(path.resolve(html_output_path)), {
+      recursive: true,
+    });
+    fs.writeFileSync(html_output_path, htmlContent, 'utf-8');
+    console.log(`HTML digest saved: ${html_output_path}`);
+  }
+
+  return digestItems;
 };
 
 export const distill_hackernews = async (
@@ -182,14 +231,15 @@ export const distill_hackernews = async (
   try {
     // Fetch the new stories.
     const stories = await getStory(args.story_type);
-    await fetch_stories(
+    return await fetch_stories(
       distiller,
       db,
       args.do_digest,
       stories,
       args.min_score,
       args.max_candidates,
-      args.max_output
+      args.max_output,
+      args.html_output_path
     );
   } finally {
     db.close();
@@ -199,7 +249,7 @@ export const distill_hackernews = async (
 // Fetch the Hackernews stories when run directly.
 if (require.main === module) {
   const cliArgs = parseArgs();
-  Distiller.perform({ extractTextOnly: true }, (distiller) =>
-    distill_hackernews(distiller, cliArgs)
-  );
+  Distiller.perform({ extractTextOnly: true }, async (distiller) => {
+    await distill_hackernews(distiller, cliArgs);
+  });
 }

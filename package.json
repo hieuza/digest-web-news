@@ -13,7 +13,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
     "@types/yargs": "^17.0.33",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "^11.10.0",
     "moment": "^2.31.0",
     "puppeteer": "^25.10.0",
     "yargs": "^17.7.2"

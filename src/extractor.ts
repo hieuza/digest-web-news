@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import os from 'os';
 import { WebPageContent } from './page_content';
 import { domDistillerScript } from './domdistiller';
@@ -15,28 +17,54 @@ export class Distiller {
   ) {}
 
   static async launchBrowser(): Promise<any> {
-    const isRaspberryPi =
-      os.platform() == 'linux' && os.arch().startsWith('arm');
-    if (isRaspberryPi) {
+    const candidatePaths = [
+      process.env.PUPPETEER_EXECUTABLE_PATH,
+      process.env.CHROME_BIN,
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      path.join(
+        os.homedir(),
+        '.cache',
+        'ms-playwright',
+        'chromium-1243',
+        'chrome-linux-arm64',
+        'chrome'
+      ),
+    ].filter((p): p is string => Boolean(p && fs.existsSync(p)));
+
+    const executablePath = candidatePaths[0];
+    const localLibs = path.join(os.homedir(), '.local', 'lib', 'chrome-libs');
+    const customEnv = fs.existsSync(localLibs)
+      ? {
+          ...process.env,
+          LD_LIBRARY_PATH: `${localLibs}:${process.env.LD_LIBRARY_PATH || ''}`,
+        }
+      : process.env;
+
+    const launchArgs = [
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+    ];
+
+    if (executablePath) {
       const puppeteer = await import('puppeteer-core');
       return await puppeteer.launch({
         headless: true,
-        executablePath: '/usr/bin/chromium-browser',
+        executablePath,
         timeout: 60000,
-        args: [
-          '--disable-gpu',
-          '--disable-dev-shm-usage',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-        ],
-      });
-    } else {
-      const puppeteer = await import('puppeteer');
-      return await puppeteer.launch({
-        headless: true,
-        args: ['--disable-gpu', '--disable-dev-shm-usage'],
+        env: customEnv,
+        args: launchArgs,
       });
     }
+
+    const puppeteer = await import('puppeteer');
+    return await puppeteer.launch({
+      headless: true,
+      env: customEnv,
+      args: launchArgs,
+    });
   }
 
   static fromBrowser(
