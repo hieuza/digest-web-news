@@ -2,9 +2,9 @@ import { WebPageContent } from './page_content';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { parseProcessedJson } from './db';
 
-const GENAI_MODEL = 'gemini-3.8-flash';
+const GENAI_MODEL = 'gemini-4-argon';
 const MAX_INPUT_TOKENS = 16000;
-const MAX_OUTPUT_TOKENS = 8192;
+const MAX_OUTPUT_TOKENS = 32768;
 
 export interface GenerativeModelLike {
   generateContent(prompt: string): Promise<{ response: { text: () => string } }>;
