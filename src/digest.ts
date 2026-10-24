@@ -54,6 +54,42 @@ Rules for style and tone:
     return this.defaultModel;
   }
 
+  static async callOpenRouter(prompt: string, systemInstruction: string, modelName: string): Promise<string | null> {
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openrouterKey) return null;
+
+    const targetModel = modelName.includes('/') ? modelName : `google/${modelName}`;
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://cbby.substack.com',
+          'X-Title': 'Digest Web News',
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`[Digestor] OpenRouter HTTP ${response.status}: ${errText}`);
+        return null;
+      }
+      const data: any = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    } catch (err: any) {
+      console.warn(`[Digestor] OpenRouter request failed: ${err.message}`);
+      return null;
+    }
+  }
+
   static async processFolder(folder: string): Promise<string | null> {
     const page = await WebPageContent.fromFolder(folder);
     if (!page) return null;
@@ -62,11 +98,16 @@ Rules for style and tone:
   }
 
   static async processPage(page: WebPageContent): Promise<string | null> {
-    const model = this.getModel();
-    if (!model) {
-      console.warn('No generative model. No processing.');
-      return null;
-    }
+    const systemInstruction = `You are an expert technical digest editor.
+Your task is to synthesize the core substance of articles into direct, informative executive digests.
+
+Rules for style and tone:
+1. Direct Declarative Voice: Present key insights, findings, technical mechanisms, and arguments directly. If the author asserts that X is Y, state "X is Y".
+2. Strict Zero Meta-Language: NEVER use third-person attributions such as "The article states / discusses / explains...", "The author argues / believes / suggests...", "This post covers...", or "According to the text...".
+3. Information-Dense & Concise: Focus on what was built, discovered, or argued with concrete details, technologies, and conclusions in 3-5 clear sentences.
+`;
+    const model_name = process.env.GENAI_MODEL || GENAI_MODEL;
+
     if (!page.content || page.content.length / 4 > MAX_INPUT_TOKENS) {
       console.warn('Article too long. More than token limit. Ignore');
       return null;
@@ -89,8 +130,28 @@ Content:
 ${page.content}
 `;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const model = this.getModel();
+    if (!model) {
+      if (process.env.OPENROUTER_API_KEY) {
+        return await this.callOpenRouter(prompt, systemInstruction, model_name);
+      }
+      console.warn('No generative model. No processing.');
+      return null;
+    }
+
+    try {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    } catch (err: any) {
+      const status = err?.status || err?.statusCode;
+      const msg = String(err?.message || err);
+      const isQuotaOrDepleted = status === 402 || status === 429 || msg.includes('402') || msg.includes('depleted') || msg.includes('RESOURCE_EXHAUSTED');
+      if (isQuotaOrDepleted && process.env.OPENROUTER_API_KEY) {
+        console.warn(`[Digestor] Google API quota/payment error (${err.message}). Falling back to OpenRouter...`);
+        return await this.callOpenRouter(prompt, systemInstruction, model_name);
+      }
+      throw err;
+    }
   }
 
   // Print processed info if it contains the full content.
