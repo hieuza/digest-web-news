@@ -132,9 +132,6 @@ ${page.content}
 
     const model = this.getModel();
     if (!model) {
-      if (process.env.OPENROUTER_API_KEY) {
-        return await this.callOpenRouter(prompt, systemInstruction, model_name);
-      }
       console.warn('No generative model. No processing.');
       return null;
     }
