@@ -1,0 +1,17 @@
+[Unit]
+Description=Daily Hacker News Distillation & Email Digest (One-shot)
+Documentation=file://%h/code/digest-web-news/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/code/digest-web-news
+ExecStart=%h/code/digest-web-news/run_hackernews.sh
+TimeoutStartSec=45min
+SuccessExitStatus=75
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

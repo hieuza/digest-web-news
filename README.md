@@ -3,11 +3,11 @@
 Automated web news distillation, executive AI summarization, and SQLite storage engine.
 
 - **Web Distillation**: Fetches and distills web articles using headless Chromium and the DOM Distiller script.
-- **Executive AI Summarization**: Synthesizes core claims, arguments, and technical insights in a direct, declarative voice (no third-person meta-language) using Google Gemini (`gemini-4-argon`).
+- **Executive AI Summarization**: Synthesizes core claims, arguments, and technical insights in a direct, declarative voice (no third-person meta-language) using Google Gemini (`gemini-4-argon`) with resilient OpenRouter fallback.
 - **SQLite Storage**: Stores metadata, full article text, reconstructed HTML, and raw distillation JSON in an optimized SQLite database with FTS5 full-text search and tag clustering.
 - **Email Digest**: Formats and delivers daily top stories via SSMTP.
 
-A daily cron job running on a Raspberry Pi / server sends the digested daily news to [webnews-101@googlegroups.com](https://groups.google.com/g/webnews-101).
+A daily systemd timer running on a Raspberry Pi / server sends the digested daily news to [webnews-101@googlegroups.com](https://groups.google.com/g/webnews-101).
 
 ---
 
@@ -16,7 +16,7 @@ A daily cron job running on a Raspberry Pi / server sends the digested daily new
 ### Prerequisites
 - Node.js (>= 18.x)
 - Chromium / Chrome browser (installed automatically via Puppeteer or system package)
-- Google Gemini API Key
+- Google Gemini API Key (and optional OpenRouter API Key for fallback)
 
 ```bash
 # Clone the repository
@@ -32,15 +32,16 @@ npm run build
 
 ### Environment Variables
 
-Set the following environment variables in your shell profile (`~/.bashrc`, `~/.bash_profile`, or systemd/cron environment):
+Set the following environment variables in `~/.bash_profile` or `.env`:
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `GOOGLE_API_KEY` | Google Gemini API key for AI summarization | *(Required for AI digest)* |
+| `OPENROUTER_API_KEY` | OpenRouter API key for quota/rate-limit fallback | *(Optional)* |
 | `GENAI_MODEL` | Gemini model name | `gemini-4-argon` |
 | `SQLITE_DB_PATH` | Path to SQLite database file | `$HOME/data/hackernews.db` |
 | `FROM_EMAIL` | Sender email address for daily digest | *(Optional)* |
-| `TO_EMAIL` | Recipient email address for daily digest | *(Optional)* |
+| `TO_EMAIL` | Recipient email address for daily digest | `webnews-101@googlegroups.com` |
 
 ---
 
@@ -153,7 +154,7 @@ SELECT url, status, created_at FROM seen_urls WHERE url = 'https://example.com/a
 
 ---
 
-## 4. Automation via SSMTP and Cron Job (Linux / Raspberry Pi)
+## 4. Automation via SSMTP and Systemd Timer (Linux / Raspberry Pi)
 
 ### A. Install and Configure SSMTP
 Edit `/etc/ssmtp/ssmtp.conf`:
@@ -166,26 +167,46 @@ UseSTARTTLS=YES
 UseTLS=YES
 ```
 
-### B. Shell Script Setup
-Ensure permissions on `run_hackernews.sh`:
+### B. Runner Script (`run_hackernews.sh`)
+Ensure executable permissions on `run_hackernews.sh`:
 ```bash
 chmod +x run_hackernews.sh
 ```
 
-The script runs the ingestion, prints output, records a timestamped log to `~/data/`, and emails the digest via `ssmtp`.
+The runner script:
+1. Sources `~/.bash_profile`, `~/.bashrc`, and `.env` (and resolves NVM `node` if installed).
+2. Acquires a non-blocking advisory lock (`${XDG_RUNTIME_DIR:-/tmp}/hackernews_digest.lock`) and exits with code `75` (`EX_TEMPFAIL`, treated as clean via `SuccessExitStatus=75`) if another instance is already running.
+3. Fetches and distills stories into `~/data/hackernews.db`, writes timestamped `.txt` and `.html` outputs to `~/data/`, and delivers the HTML email via `ssmtp`.
+4. Supports `./run_hackernews.sh --dry-run` to validate environment, `node`, and lock configuration without sending email.
 
-### C. Configure Crontab
+### C. Install and Enable Systemd User Service & Timer
+ Unit files are provided in `systemd/hackernews-digest.service` and `systemd/hackernews-digest.timer`:
+
 ```bash
-crontab -e
+# 1. Ensure user lingering is enabled so user timers run without an active SSH session
+sudo loginctl enable-linger "$USER"
+
+# 2. Copy systemd unit files to ~/.config/systemd/user/
+mkdir -p ~/.config/systemd/user
+cp systemd/hackernews-digest.service systemd/hackernews-digest.timer ~/.config/systemd/user/
+
+# 3. Reload systemd user daemon and enable the daily 05:00 Europe/Zurich timer
+systemctl --user daemon-reload
+systemctl --user enable --now hackernews-digest.timer
 ```
 
-Add the following entry to execute daily at 5:00 AM:
-```cron
-MAILTO=""
-0 5 * * * /bin/bash -l $HOME/code/digest-web-news/run_hackernews.sh >> /var/log/run_hackernews.log 2>&1
-```
+#### Useful Systemd Commands
+```bash
+# Check timer schedule and next run time
+systemctl --user list-timers hackernews-digest.timer
 
-*(Note: The `-l` flag in `/bin/bash -l` ensures `~/.bash_profile` is loaded with your `GOOGLE_API_KEY`, `FROM_EMAIL`, and `TO_EMAIL` environment variables).*
+# View service status and recent journal logs
+systemctl --user status hackernews-digest.service
+journalctl --user -u hackernews-digest.service -n 100 -f
+
+# Trigger a run manually
+systemctl --user start hackernews-digest.service
+```
 
 ### D. Raspberry Pi Notes
 If running on an ARM-based Raspberry Pi, ensure Chromium is installed:

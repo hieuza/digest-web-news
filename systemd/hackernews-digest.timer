@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily trigger for Hacker News Digest at 05:00 Europe/Zurich
+Documentation=file://%h/code/digest-web-news/README.md
+
+[Timer]
+OnCalendar=*-*-* 05:00:00 Europe/Zurich
+Persistent=true
+AccuracySec=1min
+Unit=hackernews-digest.service
+
+[Install]
+WantedBy=timers.target

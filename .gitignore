@@ -1,5 +1,7 @@
 !/src/
 !/src/**
+!/systemd/
+!/systemd/**
 !/package.json
 !/package-lock.json
 !/tsconfig.json
