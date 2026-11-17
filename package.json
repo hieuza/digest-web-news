@@ -15,7 +15,7 @@
     "@types/yargs": "^17.0.33",
     "better-sqlite3": "^11.10.0",
     "moment": "^2.31.0",
-    "puppeteer": "^25.10.0",
+    "puppeteer": "~25.17.0",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
@@ -29,6 +29,7 @@
     "js-yaml": ">=4.1.1",
     "basic-ftp": ">=5.2.0",
     "ip-address": ">=10.1.1",
-    "ws": ">=8.20.1"
+    "ws": ">=8.20.1",
+    "zod": ">=4.6.6"
   }
 }
