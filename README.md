@@ -39,7 +39,7 @@ Set the following environment variables in `~/.bash_profile` or `.env`:
 | `GOOGLE_API_KEY` | Google Gemini API key for AI summarization | *(Required for AI digest)* |
 | `OPENROUTER_API_KEY` | OpenRouter API key for quota/rate-limit fallback | *(Optional)* |
 | `GENAI_MODEL` | Gemini model name | `gemini-4-neon` |
-| `GENAI_THINKING_LEVEL` | Gemini 4 thinking level (`LOW`, `MEDIUM`, `HIGH`) | `LOW` |
+| `GENAI_THINKING_LEVEL` | Gemini 4 thinking level (`LOW`, `MEDIUM`, `HIGH`) | `MEDIUM` |
 | `SQLITE_DB_PATH` | Path to SQLite database file | `$HOME/data/hackernews.db` |
 | `FROM_EMAIL` | Sender email address for daily digest | *(Optional)* |
 | `TO_EMAIL` | Recipient email address for daily digest | `webnews-101@googlegroups.com` |
