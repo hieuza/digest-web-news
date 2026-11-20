@@ -3,7 +3,7 @@
 Automated web news distillation, executive AI summarization, and SQLite storage engine.
 
 - **Web Distillation**: Fetches and distills web articles using headless Chromium and the DOM Distiller script.
-- **Executive AI Summarization**: Synthesizes core claims, arguments, and technical insights in a direct, declarative voice (no third-person meta-language) using Google Gemini (`gemini-4-argon`) with resilient OpenRouter fallback.
+- **Executive AI Summarization**: Synthesizes core claims, arguments, and technical insights in a direct, declarative voice (no third-person meta-language) using Google Gemini (`gemini-4-hydrogen`) with resilient OpenRouter fallback.
 - **SQLite Storage**: Stores metadata, full article text, reconstructed HTML, and raw distillation JSON in an optimized SQLite database with FTS5 full-text search and tag clustering.
 - **Email Digest**: Formats and delivers daily top stories via SSMTP.
 
@@ -38,7 +38,8 @@ Set the following environment variables in `~/.bash_profile` or `.env`:
 | :--- | :--- | :--- |
 | `GOOGLE_API_KEY` | Google Gemini API key for AI summarization | *(Required for AI digest)* |
 | `OPENROUTER_API_KEY` | OpenRouter API key for quota/rate-limit fallback | *(Optional)* |
-| `GENAI_MODEL` | Gemini model name | `gemini-4-argon` |
+| `GENAI_MODEL` | Gemini model name | `gemini-4-hydrogen` |
+| `GENAI_THINKING_LEVEL` | Gemini 4 thinking level (`LOW`, `MEDIUM`, `HIGH`) | `LOW` |
 | `SQLITE_DB_PATH` | Path to SQLite database file | `$HOME/data/hackernews.db` |
 | `FROM_EMAIL` | Sender email address for daily digest | *(Optional)* |
 | `TO_EMAIL` | Recipient email address for daily digest | `webnews-101@googlegroups.com` |

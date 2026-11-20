@@ -2,7 +2,8 @@ import { WebPageContent } from './page_content';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { parseProcessedJson } from './db';
 
-const GENAI_MODEL = 'gemini-4-argon';
+const GENAI_MODEL = 'gemini-4-hydrogen';
+const GENAI_THINKING_LEVEL = 'LOW';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 32768;
 
@@ -36,13 +37,15 @@ Rules for style and tone:
 `;
       if (apiKey) {
         const genAI = new GoogleGenerativeAI(apiKey);
+        const thinkingLevel = (process.env.GENAI_THINKING_LEVEL || GENAI_THINKING_LEVEL).toUpperCase();
         this.defaultModel = genAI.getGenerativeModel({
           model: model_name,
           systemInstruction: systemInstruction,
           generationConfig: {
             maxOutputTokens: MAX_OUTPUT_TOKENS,
             responseMimeType: 'application/json',
-          },
+            ...(model_name.startsWith('gemini-4-') ? { thinkingConfig: { thinkingLevel } } : {}),
+          } as any,
         });
       } else {
         console.error(
