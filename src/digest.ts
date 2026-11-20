@@ -2,7 +2,7 @@ import { WebPageContent } from './page_content';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { parseProcessedJson } from './db';
 
-const GENAI_MODEL = 'gemini-4-hydrogen';
+const GENAI_MODEL = 'gemini-4-neon';
 const GENAI_THINKING_LEVEL = 'LOW';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 32768;
