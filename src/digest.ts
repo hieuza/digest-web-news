@@ -7,8 +7,21 @@ const GENAI_THINKING_LEVEL = 'MEDIUM';
 const MAX_INPUT_TOKENS = 16000;
 const MAX_OUTPUT_TOKENS = 32768;
 
+const SYSTEM_INSTRUCTION = `You are an expert technical digest editor.
+Your task is to synthesize the core substance of articles into direct, informative executive digests.
+
+Rules for style and tone:
+1. Direct Declarative Voice: Present key insights, findings, technical mechanisms, and arguments directly. If the author asserts that X is Y, state "X is Y".
+2. Strict Zero Meta-Language: NEVER use third-person attributions such as "The article states / discusses / explains...", "The author argues / believes / suggests...", "This post covers...", or "According to the text...".
+3. Information-Dense & Concise: Focus on what was built, discovered, or argued with concrete details, technologies, and conclusions in 3-5 clear sentences.
+`;
+
 export interface GenerativeModelLike {
   generateContent(prompt: string): Promise<{ response: { text: () => string } }>;
+  generateContentStream?(prompt: string): Promise<{
+    stream: AsyncIterable<any>;
+    response: Promise<{ text: () => string }>;
+  }>;
 }
 
 // For a given page content, summarise it and classify the topics.
@@ -20,27 +33,58 @@ export class Digestor {
     this.customModel = model;
   }
 
+  static normalizeGoogleModel(modelName: string): string {
+    return modelName.replace(/^models\//, '').replace(/^google\//, '');
+  }
+
+  static normalizeOpenRouterModel(modelName: string): string {
+    const cleaned = modelName.replace(/^models\//, '');
+    return cleaned.includes('/') ? cleaned : `google/${cleaned}`;
+  }
+
+  static resolveThinkingLevel(thinkingLevel?: string): string {
+    return (thinkingLevel || process.env.GENAI_THINKING_LEVEL || GENAI_THINKING_LEVEL).trim().toUpperCase();
+  }
+
+  static buildOpenRouterPayload(
+    prompt: string,
+    systemInstruction: string,
+    modelName: string,
+    thinkingLevel?: string
+  ): Record<string, any> {
+    const googleModel = this.normalizeGoogleModel(modelName);
+    const targetModel = this.normalizeOpenRouterModel(modelName);
+    const resolvedThinking = this.resolveThinkingLevel(thinkingLevel);
+    const supportsThinking = googleModel.startsWith('gemini-4-');
+    const effort = resolvedThinking.toLowerCase();
+
+    return {
+      model: targetModel,
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: MAX_OUTPUT_TOKENS,
+      response_format: { type: 'json_object' },
+      ...(supportsThinking
+        ? { reasoning: { effort: effort === 'off' || effort === 'disabled' ? 'none' : effort, exclude: true } }
+        : {}),
+    };
+  }
+
   static getModel(): GenerativeModelLike | null {
     if (this.customModel !== null) {
       return this.customModel;
     }
     if (!this.defaultModel) {
-      const model_name = process.env.GENAI_MODEL || GENAI_MODEL;
+      const model_name = this.normalizeGoogleModel(process.env.GENAI_MODEL || GENAI_MODEL);
       const apiKey = process.env.GOOGLE_API_KEY;
-      const systemInstruction = `You are an expert technical digest editor.
-Your task is to synthesize the core substance of articles into direct, informative executive digests.
-
-Rules for style and tone:
-1. Direct Declarative Voice: Present key insights, findings, technical mechanisms, and arguments directly. If the author asserts that X is Y, state "X is Y".
-2. Strict Zero Meta-Language: NEVER use third-person attributions such as "The article states / discusses / explains...", "The author argues / believes / suggests...", "This post covers...", or "According to the text...".
-3. Information-Dense & Concise: Focus on what was built, discovered, or argued with concrete details, technologies, and conclusions in 3-5 clear sentences.
-`;
       if (apiKey) {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const thinkingLevel = (process.env.GENAI_THINKING_LEVEL || GENAI_THINKING_LEVEL).toUpperCase();
+        const thinkingLevel = this.resolveThinkingLevel();
         this.defaultModel = genAI.getGenerativeModel({
           model: model_name,
-          systemInstruction: systemInstruction,
+          systemInstruction: SYSTEM_INSTRUCTION,
           generationConfig: {
             maxOutputTokens: MAX_OUTPUT_TOKENS,
             responseMimeType: 'application/json',
@@ -61,7 +105,7 @@ Rules for style and tone:
     const openrouterKey = process.env.OPENROUTER_API_KEY;
     if (!openrouterKey) return null;
 
-    const targetModel = modelName.includes('/') ? modelName : `google/${modelName}`;
+    const payload = this.buildOpenRouterPayload(prompt, systemInstruction, modelName);
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -71,14 +115,7 @@ Rules for style and tone:
           'HTTP-Referer': 'https://github.com/hieuza/digest-web-news',
           'X-Title': 'Digest Web News',
         },
-        body: JSON.stringify({
-          model: targetModel,
-          messages: [
-            { role: 'system', content: systemInstruction },
-            { role: 'user', content: prompt }
-          ],
-          response_format: { type: 'json_object' }
-        })
+        body: JSON.stringify(payload),
       });
       if (!response.ok) {
         const errText = await response.text();
@@ -101,14 +138,6 @@ Rules for style and tone:
   }
 
   static async processPage(page: WebPageContent): Promise<string | null> {
-    const systemInstruction = `You are an expert technical digest editor.
-Your task is to synthesize the core substance of articles into direct, informative executive digests.
-
-Rules for style and tone:
-1. Direct Declarative Voice: Present key insights, findings, technical mechanisms, and arguments directly. If the author asserts that X is Y, state "X is Y".
-2. Strict Zero Meta-Language: NEVER use third-person attributions such as "The article states / discusses / explains...", "The author argues / believes / suggests...", "This post covers...", or "According to the text...".
-3. Information-Dense & Concise: Focus on what was built, discovered, or argued with concrete details, technologies, and conclusions in 3-5 clear sentences.
-`;
     const model_name = process.env.GENAI_MODEL || GENAI_MODEL;
 
     if (!page.content || page.content.length / 4 > MAX_INPUT_TOKENS) {
@@ -140,15 +169,32 @@ ${page.content}
     }
 
     try {
+      if (typeof model.generateContentStream === 'function') {
+        const streamRes = await model.generateContentStream(prompt);
+        for await (const _chunk of streamRes.stream) {
+          // Drain stream so headers arrive immediately during thinking.
+        }
+        const response = await streamRes.response;
+        return response.text();
+      }
       const result = await model.generateContent(prompt);
       return result.response.text();
     } catch (err: any) {
       const status = err?.status || err?.statusCode;
-      const msg = String(err?.message || err);
-      const isQuotaOrDepleted = status === 402 || status === 429 || msg.includes('402') || msg.includes('depleted') || msg.includes('RESOURCE_EXHAUSTED');
-      if (isQuotaOrDepleted && process.env.OPENROUTER_API_KEY) {
-        console.warn(`[Digestor] Google API quota/payment error (${err.message}). Falling back to OpenRouter...`);
-        return await this.callOpenRouter(prompt, systemInstruction, model_name);
+      const msg = String(err?.message || err).toLowerCase();
+      const isFallbackEligible =
+        status === 402 ||
+        status === 429 ||
+        status === 408 ||
+        (typeof status === 'number' && status >= 500) ||
+        msg.includes('402') ||
+        msg.includes('depleted') ||
+        msg.includes('resource_exhausted') ||
+        msg.includes('fetch failed') ||
+        msg.includes('timeout');
+      if (isFallbackEligible && process.env.OPENROUTER_API_KEY) {
+        console.warn(`[Digestor] Google API error (${err.message}). Falling back to OpenRouter for this request...`);
+        return await this.callOpenRouter(prompt, SYSTEM_INSTRUCTION, model_name);
       }
       throw err;
     }

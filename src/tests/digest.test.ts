@@ -108,4 +108,20 @@ describe('digest.ts: Digestor', () => {
       console.log = origLog;
     }
   });
+
+  test('buildOpenRouterPayload matches Direct Google thinkingLevel, max_tokens, and JSON settings', () => {
+    const payload = Digestor.buildOpenRouterPayload('Summarize', 'Be direct.', 'gemini-4-neon', 'MEDIUM');
+    assert.equal(payload.model, 'google/gemini-4-neon');
+    assert.deepEqual(payload.messages, [
+      { role: 'system', content: 'Be direct.' },
+      { role: 'user', content: 'Summarize' },
+    ]);
+    assert.equal(payload.max_tokens, 32768);
+    assert.deepEqual(payload.response_format, { type: 'json_object' });
+    assert.deepEqual(payload.reasoning, { effort: 'medium', exclude: true });
+
+    // Non-Gemini-4 model omits reasoning
+    const legacy = Digestor.buildOpenRouterPayload('Summarize', 'Be direct.', 'gemini-2.5-flash');
+    assert.equal(legacy.reasoning, undefined);
+  });
 });
